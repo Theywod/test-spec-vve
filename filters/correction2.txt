@@ -1,0 +1,41 @@
+
+peak1_target_pos = 98.5
+peak2_target_pos = 218
+
+def peak1_pos(payload):
+    pos = peak1_target_pos
+    count_rate_on_water = 87000
+
+    if payload < count_rate_on_water:
+        x = payload
+        p1 =    6.960082e-10
+        p2 =   -1.417578e-04
+        p3 =  102.0603367135
+        pos = p1*pow(x, 2) + p2*x + p3
+    else:
+        x = payload
+        p1 = -2.245247e-16
+        p2 =  1.949305e-10
+        p3 = -7.212823e-05  
+        p4 = 99.9058996824      
+        pos = p1*pow(x, 3) + p2*pow(x, 2) + p3*x + p4
+    return pos
+
+def peak2_pos(payload):
+    pos = peak2_target_pos
+    count_rate_on_water = 87000
+
+    if payload < count_rate_on_water:
+        x = payload
+        p1 =   1.3515e-09 
+        p2 =  -0.0002776825	
+        p3 = 221.7962913950  
+        pos = p1*pow(x, 2) + p2*x + p3
+    else:
+        x = payload
+        p1 = -3.6617e-16
+        p2 =  3.5483e-10
+        p3 = -0.0001389151
+        p4 = 217.6698884596
+        pos = p1*pow(x, 3) + p2*pow(x, 2) + p3*x + p4
+    return pos

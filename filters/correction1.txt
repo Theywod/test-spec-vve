@@ -1,0 +1,21 @@
+#peak1_target_pos = 140.4
+#peak2_target_pos = 287.3
+
+peak1_target_pos = 200.4
+peak2_target_pos = 400.3
+
+def peak1_pos(payload):
+        x = payload
+        a = -608.6312
+        b =    0.007376
+        c =  809.6159 
+        pos = a*pow(x,b)+c
+        return pos
+
+def peak2_pos(payload):
+        x = payload
+        a =      -10.6042
+        b =    0.1604
+        c =       370.6525
+        pos = a*pow(x,b)+c
+        return pos

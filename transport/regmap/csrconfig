@@ -1,0 +1,22 @@
+[globcfg]
+base_address = 0
+data_width = 32
+address_width = 32
+address_increment = 4
+
+[v_module]
+path = rtl/regmap.sv
+interface = axil
+generator = Verilog
+
+[markdown]
+path = README.md
+generator = Markdown
+
+[py_header]
+path = include/regmap.py
+generator = Python
+
+[c_header]
+path = include/regmap.h
+generator = CHeader

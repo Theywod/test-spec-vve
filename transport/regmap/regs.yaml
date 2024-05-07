@@ -1,0 +1,309 @@
+regmap:
+-       name: SAMPL_NUM
+        description: Длительность интервала сбора данных. 125е6 (1 сек) по-умолчанию.
+        address: 0
+        bitfields:
+        -       reset: 125000000
+                width: 32
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: AREA0_START
+        description: Начальный бин интеграла в спектре, зона 0
+        bitfields:
+        -       reset: 0
+                width: 16
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: AREA1_START
+        description: Начальный бин интеграла в спектре, зона 1
+        bitfields:
+        -       reset: 0
+                width: 16
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: AREA2_START
+        description: Начальный бин интеграла в спектре, зона 2
+        bitfields:
+        -       reset: 0
+                width: 16
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: AREA0_END
+        description: Последний бин интеграла в спектре, зона 0
+        bitfields:
+        -       reset: 1023
+                width: 16
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: AREA1_END
+        description: Последний бин интеграла в спектре, зона 1
+        bitfields:
+        -       reset: 0
+                width: 16
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: AREA2_END
+        description: Последний бин интеграла в спектре, зона 2
+        bitfields:
+        -       reset: 0
+                width: 16
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: BUF_CTRL
+        description: Управление сбором данных устройства
+        bitfields:
+        -       name: spec_req
+                description: Флаг запроса спектра
+                reset: 0
+                width: 1
+                lsb: 0
+                access: wo
+                hardware: o
+        -       name: area_req
+                description: Флаг запроса трех интегралов в заданных бинах спектра
+                reset: 0
+                width: 1
+                lsb: 1
+                access: wo
+                hardware: o
+-       name: ACC_START
+        description: Определяет момент начала расчета интеграла внутри гейта, сдвиг от начала гейта
+        bitfields:
+        -       reset: 0
+                width: 8
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: ACC_STOP
+        description: Определяет момент окончания расчета интеграла внутри гейта, сдвиг от конца гейта
+        bitfields:
+        -       reset: 128
+                width: 8
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: ADC_TH
+        description: Уровень входного сигнала, первышение которого считается началом импульса (началом гейта)
+        bitfields:
+        -       reset: 250
+                width: 16
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: ADC_FILTER
+        description: Фильтр скользящего среднего входного импульса
+        bitfields:
+        -       name: bypass
+                description: Bypass
+                reset: 1
+                width: 1
+                lsb: 7
+                access: rw
+                hardware: o
+        -       name: window_size
+                description: Размер окна фильтра по степени двойки (2^window_size)
+                reset: 2
+                width: 3
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: BLINE_CTRL
+        description: Управление модулем расчета baseline
+        bitfields:
+        -       name: auto_baseline
+                description: Включить автоматический расчет
+                reset: 0
+                width: 1
+                lsb: 7
+                access: rw
+                hardware: o
+        -       name: averagings
+                description: Количество усреднений при расчете baseline, по степени двойки (2^averagings)
+                reset: 6
+                width: 4
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: BLINE_MANUAL
+        description: Регистр установки baseline. Знаковое число, которое вычитается из входного сигнала. Применяется только при (auto_baseline == 0)
+        bitfields:
+        -       reset: 0
+                width: 16
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: BLINE_ACC
+        description: Acceptance level baseline. Размах сигнала между BLINE_TREND_DELAY точками, который считается стабильный и используется для расчета.
+        bitfields:
+        -       reset: 20
+                width: 16
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: BLINE_TREND_DELAY
+        description: Trend delay baseline. Расстояние между двумя отсчетами сигнала, разница которых измеряется BLINE_ACC.
+        bitfields:
+        -       reset: 15
+                width: 6
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: BLINE_ACTUAL
+        description: Текущее значение baseline. Обновляется независимо от любых других сигналов.
+        bitfields:
+        -       reset: 0
+                width: 15
+                lsb: 0
+                access: ro
+                hardware: ie
+-       name: GATE_CTRL
+        description: Управление гейтом
+        bitfields:
+        -       name: hysteresis_en
+                description: Включить hysteresis снятия гейта на уровне threshold/2
+                reset: 0
+                width: 1
+                lsb: 0
+                access: rw
+                hardware: o
+        -       name: pileup_reject
+                description: Отбрасывать gates, где есть pileup
+                reset: 0
+                width: 1
+                lsb: 1
+                access: rw
+                hardware: o
+        -       name: pre_trigger
+                description: Включение в гейт отсчетов до пересечение сигналом уровня threshold
+                reset: 0
+                width: 6
+                lsb: 2
+                access: rw
+                hardware: o
+-       name: DUMP_CTRL
+        description: Управление режимом осциллографа
+        bitfields:
+        -       name: enable
+                description: Захватить следующий валидный гейт
+                reset: 0
+                width: 1
+                lsb: 0
+                access: wosc
+                hardware: o
+        -       name: samples
+                description: Количество семплов для набора и передачи
+                reset: 0
+                width: 11
+                lsb: 1
+                access: rw
+                hardware: o
+-       name: PILEUP_ACC
+        description: Acceptance level pileup. Размах сигнала между PILEUP_TREND_DELAY точками, который считается pile-up.
+        bitfields:
+        -       reset: 20
+                width: 16
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: PILEUP_TREND_DELAY
+        description: Trend delay pileup. Расстояние между двумя отсчетами сигнала, разница которых измеряется PILEUP_ACC.
+        bitfields:
+        -       reset: 0
+                width: 6
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: PILEUP_ACTUAL
+        description: Флаг наличия pile-up в последнем запрошенном DUMP_CTRL кадре
+        bitfields:
+        -       reset: 0
+                width: 1
+                lsb: 0
+                access: ro
+                hardware: ie
+-       name: PILEUP_CNT_CTRL
+        description: Управление счетчиком pile-up
+        bitfields:
+        -       name: frame_rst
+                description: Сбрасывать счетчик каждый кадр
+                reset: 0
+                width: 1
+                lsb: 0
+                access: rw
+                hardware: o
+        -       name: pileup_cnt_rst
+                description: Сброс счетчика
+                reset: 0
+                width: 1
+                lsb: 1
+                access: wosc
+                hardware: o
+-       name: PILEUP_CNT
+        description: Счетчик pile-up
+        bitfields:
+        -       reset: 0
+                width: 32
+                lsb: 0
+                access: ro
+                hardware: i
+-       name: COUNT_TH_0
+        description: Threshold счетчика импульсов 0
+        bitfields:
+        -       reset: 250
+                width: 16
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: COUNT_VAL_0
+        description: Значение счетчика 0
+        bitfields:
+        -       reset: 0
+                width: 32
+                lsb: 0
+                access: ro
+                hardware: ie
+-       name: COUNT_TH_1
+        description: Threshold счетчика импульсов 1
+        bitfields:
+        -       reset: 500
+                width: 16
+                lsb: 0
+                access: rw
+                hardware: o
+-       name: COUNT_VAL_1
+        description: Значение счетчика 1
+        bitfields:
+        -       reset: 0
+                width: 32
+                lsb: 0
+                access: ro
+                hardware: ie
+-       name: VER
+        description: Ревизия прошивки ПЛИС
+        address: 1024
+        bitfields:
+        -       width: 8
+                lsb: 0
+                access: ro
+                hardware: i
+-       name: SUB
+        description: Подверсия прошивки ПЛИС
+        bitfields:
+        -       width: 8
+                lsb: 0
+                access: ro
+                hardware: i
+-       name: REV
+        description: Ревизия прошивки ПЛИС
+        bitfields:
+        -       width: 8
+                lsb: 0
+                access: ro
+                hardware: i
