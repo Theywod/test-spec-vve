@@ -29,6 +29,8 @@ sys.path.append("./transport/")
 import oscilloscope.oscilloscope as oscope
 import spectrometer.spectrometer as spmeter
 
+from spectrometer.spectrometer import Spectro
+
 from transport import api, scpi, api_param
 from devices.devices import DeviceConn, DeviceConn_MasterSlave, DevicesMap, Device, Channel, ChannelWindow, BoardsManager, BoardWindow
 
@@ -115,30 +117,26 @@ class MainWindow(QMainWindow):
         self.board = api.api(self.daq_cont, self.transport_param, False, False)
         self.board.moveToThread(self.board_thread)
 
-        self.thr_spec_widget = QThread()
-        self.m_specWidget.moveToThread(self.thr_spec_widget)
-        self.thr_sum_widget = QThread()
-        self.m_sumSpectrometer.moveToThread(self.thr_sum_widget)
-
         self.oscope_widget.signal_dump_wave.connect(self.slot_dump_wave)
         self.signal_dump_wave.connect(self.board.dump_wave)
         self.oscope_widget.signal_dump_wave_stop.connect(self.slot_dump_wave_done)
         self.board.signal_upd_wave.connect(self.oscope_widget.slot_on_wave_update)
 
-        #self.m_graphWidget.signal_dump_spec.connect(self.slot_dump_spec)
-        #self.signal_dump_spec.connect(self.board.dump_wave)
-        #self.board.signal_upd_wave.connect(self.m_graphWidget.slot_on_spec_update)
-
         self.cwidget.conn_window.btn_connect.clicked.connect(lambda: self.connectDevice(self.cwidget.conn_window))
         self.cwidget.conn_window.btn_delete.clicked.connect(lambda: self.removeDevice(self.cwidget.conn_window))
-        #self.cwidget.btn_get_spectrum.clicked.connect(lambda: self.get_spectrum(True))
-        self.cwidget.btn_get_spectrum.clicked.connect(lambda: self.get_cont_spectrum())
 
         self.board_thread.start() 
 
-        self.thr_spec_widget.start()
-        self.thr_sum_widget.start()
-        
+        self.thr_daq_widget = QThread()
+        self.worker = Spectro(self.devicesMap, True)
+        self.worker.moveToThread(self.thr_daq_widget)
+
+        self.worker.signal_dataReady.connect(lambda devicesMap, useSum=True: self.m_sumSpectrometer.slot_on_spec_update(devicesMap, useSum))
+        self.worker.signal_dataReady.connect(lambda devicesMap, useSum=False: self.m_specWidget.slot_on_spec_update(devicesMap, useSum))
+        self.worker.finished.connect(self.thr_daq_widget.terminate)
+
+        self.thr_daq_widget.started.connect(self.worker.run)
+        self.cwidget.btn_get_spectrum.clicked.connect(self.thr_daq_widget.start)        
 
     def slot_dump_wave_done(self):
         self.daq_cont['dumping_wave'] = False 
@@ -160,7 +158,6 @@ class MainWindow(QMainWindow):
 
         self.oscope_widget = oscope.OscilloscopeW()
 
-
         self.m_specWidget = spmeter.Spectrometer()
         self.m_sumSpectrometer = spmeter.Spectrometer()
         
@@ -175,9 +172,7 @@ class MainWindow(QMainWindow):
         tabs_lyout.addTab(self.m_specWidget, "Spectrometer")
         tabs_lyout.addTab(self.m_sumSpectrometer, "SMeter (SUM)")
 
-
         hlayout.addWidget(tabs_lyout)
-
         centerwidget = QWidget()
         win_lyout.addWidget(self.cwidget)
         win_lyout.addWidget(self.boards_mgr)
@@ -264,51 +259,6 @@ class MainWindow(QMainWindow):
                 channel.updUI()
                 i += 1
 
-    def get_cont_spectrum(self):
-        for i in range(3):
-            self.get_spectrum(True)
-
-    def get_spectrum(self, isContinuous):
-        for deviceIP in self.devicesMap:
-            self.settings["ip"] = deviceIP
-            self.devicesMap[deviceIP].board.connect(self.settings)
-
-        data = dict()
-        for device in self.devicesMap.values():
-            device.board.transport.client.write('SPEC?')             #query spectra
-            data.update({device.ip: device.board.transport.read_data()})  #get spectra from device
-            #for each channel data length is 1024 bytes + 3 bytes per channel + 6 ending bytes after the whole data array
-            #data is within ranges nChannel*1027 : nChannel*1027 + 1024
-            #or nChannel*1027 : (nChannel+1)*1027 - 3
-            nActiveChannels = int(((len(data[device.ip]) - 6)/1027))
-            for chan in range(0, nActiveChannels):
-                dataChunk = data[device.ip][chan*1027:(chan+1)*1027-3]
-                if isContinuous:
-                    device.channels[chan].data = np.add(device.channels[chan].data, dataChunk)
-                    #self.m_graphWidget.dataSets = self.m_graphWidget.addPlot(device.channels[chan].name)
-                else:
-                    device.channels[chan].data = dataChunk
-        self.drawSpectra(nActiveChannels + 1)
-
-    def drawSpectra(self, nActives):
-        dataSum = np.array([0] * 1024)
-
-        plotIndex = 0
-        self.m_specWidget.clear()
-        #self.m_sumSpectrometer.clear()
-
-        for device in self.devicesMap.values():
-            for chan in device.channels:
-                if chan.isActive:
-                    print("Channel name: {0}".format(chan.name))
-                    dataSum += np.array(chan.data)
-                    #self.m_specWidget.pltgraph.setData(self.m_sumSpectrometer.bins, np.array(dataSum))
-                    self.m_specWidget.plot(np.array(chan.data), pen = pg.mkPen(color = self.m_specWidget.clr_cycle[plotIndex], width=2), name=chan.name)
-                plotIndex += 1
-
-        #self.m_sumSpectrometer.plot(np.array(dataSum), pen = pg.mkPen(color = self.m_graphWidget.clr_cycle[10], width=2), name='Summary spectrum')
-        self.m_sumSpectrometer.pltgraph.setData(self.m_sumSpectrometer.bins, np.array(dataSum))
-        #self.m_sumSpectrometer.plot(self.m_sumSpectrometer.bins, np.array(dataSum), pen = self.m_sumSpectrometer.pen)
      
 app = QApplication(sys.argv)
 window = MainWindow()
