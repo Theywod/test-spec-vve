@@ -11,10 +11,11 @@ import sys
 import time
 import csv
 import logging
+import re
 import numpy as np
 from PyQt5.QtCore import pyqtSignal, QSettings, QObject, pyqtSlot
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QPushButton, QHBoxLayout, QLabel
 from pyqt_instruments import ui_data_saver
 from pyqtgraph import PlotWidget
 
@@ -22,108 +23,49 @@ import pyqtgraph as pg
 
 class Spectrometer(QWidget):
     name = 'Spectrometer'
-    signal_dump_spec = pyqtSignal(object, object, object)
-    signal_dump_spec_stop = pyqtSignal()
     signal_dataReady = pyqtSignal(object, object)
     def __init__(self):
         super().__init__()
+        self.setupUI()
+
+        self.devicesMap = None
+        self.useSum = True
+
+        self.btn_clear.clicked.connect(self.m_sp_plotter.clear)
+        self.btn_replot_act.clicked.connect(self.replot)
+
+    def setupUI(self):
+        self.m_sp_plotter = PlSpectrometer()
+        self.btn_clear = QPushButton("Clear plot")
+        self.btn_replot_act = QPushButton("Replot only active")
+        self.btn_replot_act.setEnabled(False)
+        self.lbl_entries = QLabel("0/0 entries")
+
         self.layout = QVBoxLayout()
 
-        self.groupBox_PeakStab = QtWidgets.QGroupBox()
-        self.groupBox_PeakStab.setTitle("Peak stabilization")
-        self.gridLayout_PeakStab = QtWidgets.QGridLayout(self.groupBox_PeakStab)
+        self.layout_btns = QHBoxLayout()
+        self.layout_btns.addWidget(self.btn_clear)
+        self.layout_btns.addWidget(self.btn_replot_act)
+        self.layout_btns.addWidget(self.lbl_entries)
 
-        #Enable
-        self.m_check_keep_on_channel = QtWidgets.QCheckBox(self.groupBox_PeakStab)
-        self.m_check_keep_on_channel.setText("Enable")
-        #self.m_check_keep_on_channel.setObjectName("m_check_keep_on_channel")
-        self.gridLayout_PeakStab.addWidget(self.m_check_keep_on_channel, 0, 0, 1, 1)
-
-        #Peak in area
-        self.m_label_peak_stabil2 = QtWidgets.QLabel(self.groupBox_PeakStab)
-        self.m_label_peak_stabil2.setEnabled(False)
-        #self.m_label_peak_stabil2.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.m_label_peak_stabil2.setText("Peak in area")
-        #self.m_label_peak_stabil2.setObjectName("m_label_peak_stabil2")
-        self.gridLayout_PeakStab.addWidget(self.m_label_peak_stabil2, 1, 0, 1, 1)
-        self.m_spin_area_to_track = QtWidgets.QSpinBox(self.groupBox_PeakStab)
-        self.m_spin_area_to_track.setEnabled(False)
-        self.m_spin_area_to_track.setMinimum(1)
-        self.m_spin_area_to_track.setMaximum(3)
-        self.m_spin_area_to_track.setProperty("value", 2)
-        #self.m_spin_area_to_track.setObjectName("m_spin_area_to_track")
-        self.gridLayout_PeakStab.addWidget(self.m_spin_area_to_track, 1, 1, 1, 1)
-
-        #Step size
-        self.m_label_peak_stabil_step_size = QtWidgets.QLabel(self.groupBox_PeakStab)
-        self.m_label_peak_stabil_step_size.setEnabled(False)
-        #self.m_label_peak_stabil_step_size.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.m_label_peak_stabil_step_size.setText("Step size")
-        self.gridLayout_PeakStab.addWidget(self.m_label_peak_stabil_step_size, 2, 0, 1, 1)
-        self.m_spin_peak_stabil_step_size = QtWidgets.QSpinBox(self.groupBox_PeakStab)
-        self.m_spin_peak_stabil_step_size.setEnabled(False)
-        self.m_spin_peak_stabil_step_size.setMinimum(1)
-        self.m_spin_peak_stabil_step_size.setMaximum(32)
-        #self.m_spin_peak_stabil_step_size.setObjectName("m_spin_peak_stabil_step_size")
-        self.gridLayout_PeakStab.addWidget(self.m_spin_peak_stabil_step_size, 2, 1, 1, 1)
-
-        #Avg frames for search
-        self.m_label_peak_stabil1 = QtWidgets.QLabel(self.groupBox_PeakStab)
-        self.m_label_peak_stabil1.setEnabled(False)
-        #self.m_label_peak_stabil1.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.m_label_peak_stabil1.setText("Avg frames for search")
-        #self.m_label_peak_stabil1.setObjectName("m_label_peak_stabil1")
-        self.gridLayout_PeakStab.addWidget(self.m_label_peak_stabil1, 1, 2, 1, 1)
-        self.m_spin_compensate_avg_frames = QtWidgets.QSpinBox(self.groupBox_PeakStab)
-        self.m_spin_compensate_avg_frames.setEnabled(False)
-        #self.m_spin_compensate_avg_frames.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.m_spin_compensate_avg_frames.setMaximum(600)
-        self.m_spin_compensate_avg_frames.setProperty("value", 60)
-        #self.m_spin_compensate_avg_frames.setObjectName("m_spin_compensate_avg_frames")
-        self.gridLayout_PeakStab.addWidget(self.m_spin_compensate_avg_frames, 1, 3, 1, 1)
-
-        #keep on channel
-        self.m_label_peak_stabil3 = QtWidgets.QLabel(self.groupBox_PeakStab)
-        self.m_label_peak_stabil3.setEnabled(False)
-        #self.m_label_peak_stabil3.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.m_label_peak_stabil3.setText("keep on channel")
-        #self.m_label_peak_stabil3.setObjectName("m_label_peak_stabil3")
-        self.gridLayout_PeakStab.addWidget(self.m_label_peak_stabil3, 2, 2, 1, 1)
-        self.m_spin_keep_channel = QtWidgets.QSpinBox(self.groupBox_PeakStab)
-        self.m_spin_keep_channel.setEnabled(False)
-        #self.m_spin_keep_channel.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.m_spin_keep_channel.setMaximum(1023)
-        self.m_spin_keep_channel.setProperty("value", 150)
-        #self.m_spin_keep_channel.setObjectName("m_spin_keep_channel")
-        self.gridLayout_PeakStab.addWidget(self.m_spin_keep_channel, 2, 3, 1, 1)
-
-        #Peak found on channel
-        self.m_label_peak_stabil4 = QtWidgets.QLabel(self.groupBox_PeakStab)
-        self.m_label_peak_stabil4.setEnabled(False)
-        #self.m_label_peak_stabil4.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.m_label_peak_stabil4.setText("Peak found on channel")
-        #self.m_label_peak_stabil4.setObjectName("m_label_peak_stabil4")
-        self.gridLayout_PeakStab.addWidget(self.m_label_peak_stabil4, 0, 1, 1, 1)
-        self.m_label_peak_stabil_channel = QtWidgets.QLabel(self.groupBox_PeakStab)
-        self.m_label_peak_stabil_channel.setEnabled(False)
-        #self.m_label_peak_stabil_channel.setAlignment(QtCore.Qt.AlignCenter)
-        self.m_label_peak_stabil_channel.setText("0.00")
-        #self.m_label_peak_stabil_channel.setObjectName("m_label_peak_stabil_channel")
-        self.gridLayout_PeakStab.addWidget(self.m_label_peak_stabil_channel, 0, 2, 1, 1)
-
-        self.layout.addWidget(self.groupBox_PeakStab)
-        self.m_pi_plotter = PeakIntegSpec()
-        self.layout.addWidget(self.m_pi_plotter)
-        self.m_sp_plotter = PlSpectrometer()
+        self.layout.addLayout(self.layout_btns)
         self.layout.addWidget(self.m_sp_plotter)
         self.setLayout(self.layout)
 
-    def slot_on_spec_update(self, devicesMap, useSum):
+    def replot(self):
+        text = self.lbl_entries.text()
+        entries = re.findall(r'\d+', text)[0]
+        self.slot_on_spec_update(self.devicesMap, entries, self.useSum)
+
+    @pyqtSlot(object, object)
+    def slot_on_spec_update(self, devicesMap, entry, useSum):
+        self.devicesMap = devicesMap
+        self.useSum = useSum
+
         dataSum = 0
         plotIndex = 0
-        if not useSum:
-            self.m_sp_plotter.clear()
-        for device in devicesMap.values():
+        self.m_sp_plotter.clear()
+        for device in self.devicesMap.values():
             for chan in device.channels:
                 if chan.isActive:
                     print("Channel name: {0}".format(chan.name))
@@ -133,21 +75,26 @@ class Spectrometer(QWidget):
                             color = self.m_sp_plotter.clr_cycle[plotIndex], width=2), name=chan.name)
                 plotIndex += 1
 
-        time = self.m_sp_plotter.bins
+        bins = self.m_sp_plotter.bins
         counts = np.array(dataSum)          
-        if useSum:
-            self.m_sp_plotter.pltgraph.setData(time, counts)
-        print("Spectrum dumped")
+        if self.useSum:
+            self.m_sp_plotter.plot(bins,counts, pen = self.m_sp_plotter.pen, name = "Summary spectrum")
+        
+        self.lbl_entries.setText("{0} frames".format(entry))
+
+        self.btn_replot_act.setEnabled(True)
+        print("Spectrum plotted")
 
 class PlSpectrometer(PlotWidget):
-    clr_cycle = ['#000', '#c77', '#0f0', '#00f','#054', '#d21', '#6f0', '#712', '#912', '#a3e', '#f21', '#840']
+    clr_cycle = ['#000', '#c77', '#0f0', '#00f','#054', '#d21', '#6c5', '#712', '#912', '#a3e', '#f21', '#840']
 
     def __init__(self):
         super().__init__()
         self.setBackground('w')
         self.setXRange(0, 1024, padding=0)
         self.setYRange(0, 100, padding=0)
-        self.setMouseEnabled(x=True, y=True)
+        self.enableAutoRange(axis='y')
+        self.setMouseEnabled(x=False, y=True)
         self.setLimits(yMin=0)
         self.setLabel('left', 'Counts')
         self.setLabel('bottom', 'Channel ID')  
@@ -194,7 +141,7 @@ class PeakIntegSpec(PlotWidget):
 
 class SpectraDAQ(QObject):
     finished = pyqtSignal()
-    signal_dataReady = pyqtSignal(object)
+    signal_dataReady = pyqtSignal(object, int)
     nEntries = 10
     def __init__(self, devicesMap, isCont):
         super().__init__()
@@ -204,16 +151,12 @@ class SpectraDAQ(QObject):
     @pyqtSlot()
     def run(self):
         self.get_spectrum(self.nEntries)
+        print("Data acquisition finished")
         self.finished.emit()
 
     def get_spectrum(self, nEntries):
-        #self.settings = settings
-        #for deviceIP in self.devicesMap:
-        #    self.settings["ip"] = deviceIP
-        #    self.devicesMap[deviceIP].board.connect(self.settings)
-
         data = dict()
-        for i in range(nEntries):
+        for entry in range(nEntries):
             for device in self.devicesMap.values():
                 device.board.transport.client.write('SPEC?')             #query spectra
                 data.update({device.ip: device.board.transport.read_data()})  #get spectra from device
@@ -228,4 +171,4 @@ class SpectraDAQ(QObject):
                         #self.m_graphWidget.dataSets = self.m_graphWidget.addPlot(device.channels[chan].name)
                     else:
                         device.channels[chan].data = dataChunk
-            self.signal_dataReady.emit(self.devicesMap)
+            self.signal_dataReady.emit(self.devicesMap, (entry+1))
