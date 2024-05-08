@@ -29,14 +29,12 @@ sys.path.append("./transport/")
 import oscilloscope.oscilloscope as oscope
 import spectrometer.spectrometer as spmeter
 
-from spectrometer.spectrometer import Spectro
+from spectrometer.spectrometer import SpectraDAQ
 
-from transport import api, scpi, api_param
-from devices.devices import DeviceConn, DeviceConn_MasterSlave, DevicesMap, Device, Channel, ChannelWindow, BoardsManager, BoardWindow
+from transport import api, api_param
+from devices.devices import DeviceConn_MasterSlave, DevicesMap, Device, Channel, ChannelWindow, BoardsManager, BoardWindow
 
-import matplotlib.pyplot as plt
 import numpy as np
-import pyqtgraph as pg
 
 class ConnectionWidget(QWidget):
     def __init__(self):
@@ -63,14 +61,15 @@ class ConnectionWidget(QWidget):
         self.setMinimumSize(450,400)
 
         #if "Connect" button is pressed, content of devices list is updated in major widget
-        #self.conn_window.btn_connect.clicked.connect(lambda: self.addFullData_on_Connected(False))
+
+
 
 #change type of connection widget if checkbox is checked, currently is a placeholder
     def show_connect(self):
         if self.chk_use_master.isChecked():
-            print("Use master-slave configuration")
+            print("Will use master-slave configuration")
         else:
-            print("Do not use master-slave configuration")
+            print("Will not use master-slave configuration")
 #add data in table for new device
     def addFullData_on_Connected(self, isConnected, uptime):
         props = Device()
@@ -128,7 +127,7 @@ class MainWindow(QMainWindow):
         self.board_thread.start() 
 
         self.thr_daq_widget = QThread()
-        self.worker = Spectro(self.devicesMap, True)
+        self.worker = SpectraDAQ(self.devicesMap, True)
         self.worker.moveToThread(self.thr_daq_widget)
 
         self.worker.signal_dataReady.connect(lambda devicesMap, useSum=True: self.m_sumSpectrometer.slot_on_spec_update(devicesMap, useSum))

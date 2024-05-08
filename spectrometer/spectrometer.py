@@ -1,3 +1,10 @@
+'''
+  Project       : Spectrometer
+  Author        : chumadan
+  Contacts      : dkc1@tpu.ru
+  Workfile      : spectrometer.py
+  Description   : Data acquisition interface for multi-channel spectrometer
+'''
 
 import os
 import sys
@@ -71,10 +78,10 @@ class PlSpectrometer(PlotWidget):
         self.pltgraph = self.plot(self.bins, self.dataset, name="Test", pen = self.pen )
 
 
-class Spectro(QObject):
+class SpectraDAQ(QObject):
     finished = pyqtSignal()
     signal_dataReady = pyqtSignal(object)
-    nEntries = 3
+    nEntries = 10
     def __init__(self, devicesMap, isCont):
         super().__init__()
         self.devicesMap = devicesMap
@@ -85,7 +92,6 @@ class Spectro(QObject):
         self.get_spectrum(self.nEntries)
         self.finished.emit()
 
-    @pyqtSlot(object, object, object, object)
     def get_spectrum(self, nEntries):
         #self.settings = settings
         #for deviceIP in self.devicesMap:
