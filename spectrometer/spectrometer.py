@@ -13,9 +13,9 @@ import csv
 import logging
 import re
 import numpy as np
-from PyQt5.QtCore import pyqtSignal, QSettings, QObject, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSignal, QSettings, QObject, pyqtSlot
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QPushButton, QHBoxLayout, QLabel
+from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QPushButton, QHBoxLayout, QLabel, QCheckBox
 from pyqt_instruments import ui_data_saver
 from pyqtgraph import PlotWidget
 
@@ -26,6 +26,8 @@ class Spectrometer(QWidget):
     signal_dataReady = pyqtSignal(object, object)
     def __init__(self):
         super().__init__()
+        self.m_sp_plotter = PlSpectrometer()
+        self.trends = PeakTrends()
         self.setupUI()
 
         self.devicesMap = None
@@ -33,12 +35,22 @@ class Spectrometer(QWidget):
 
         self.btn_clear.clicked.connect(self.m_sp_plotter.clear)
         self.btn_replot_act.clicked.connect(self.replot)
+        self.chk_enableTrends.stateChanged.connect(self.enableTrends)
+
+    def enableTrends(self):
+        if self.chk_enableTrends.isChecked():
+            self.trends.setHidden(False)
+        else:
+            self.trends.setHidden(True)
+
 
     def setupUI(self):
-        self.m_sp_plotter = PlSpectrometer()
         self.btn_clear = QPushButton("Clear plot")
         self.btn_replot_act = QPushButton("Replot only active")
         self.btn_replot_act.setEnabled(False)
+        self.chk_enableTrends = QCheckBox("Enable trends analyzer")
+        self.trends.setHidden(True)
+
         self.lbl_entries = QLabel("0/0 entries")
 
         self.layout = QVBoxLayout()
@@ -47,8 +59,10 @@ class Spectrometer(QWidget):
         self.layout_btns.addWidget(self.btn_clear)
         self.layout_btns.addWidget(self.btn_replot_act)
         self.layout_btns.addWidget(self.lbl_entries)
+        self.layout_btns.addWidget(self.chk_enableTrends)
 
         self.layout.addLayout(self.layout_btns)
+        self.layout.addWidget(self.trends)
         self.layout.addWidget(self.m_sp_plotter)
         self.setLayout(self.layout)
 
@@ -109,6 +123,120 @@ class PlSpectrometer(PlotWidget):
         self.bins = np.array( range(0, len(self.dataset)))
         self.pen = pg.mkPen(color=(255, 0, 0))
         self.pltgraph = self.plot(self.bins, self.dataset, name="Test", pen = self.pen )
+
+class PeakTrends(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.pl_trends = PlTrend()
+        self.trParams = TrendsParams()
+        self.setupUI()
+
+
+    def setupUI(self):
+        self.layout = QVBoxLayout()
+
+        # self.chk_enable = QCheckBox()
+        # self.chk_enable.setText("Enable analyzer")
+        #self.trParams.setEnabled(False)
+
+        #self.layout.addWidget(self.chk_enable)
+        self.layout.addWidget(self.trParams)
+        self.layout.addWidget(self.pl_trends)
+        self.setLayout(self.layout)
+        self.setMaximumHeight(400)
+
+
+class TrendsParams(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setupUI()
+    def setupUI(self):
+        self.layout = QVBoxLayout()
+        self.groupBox_PeakStab = QtWidgets.QGroupBox()
+        self.groupBox_PeakStab.setTitle("Peak stabilization")
+        self.gridLayout_PeakStab = QtWidgets.QGridLayout(self.groupBox_PeakStab)
+
+        #Peak in area
+        self.m_label_peak_stabil2 = QtWidgets.QLabel(self.groupBox_PeakStab)
+        self.m_label_peak_stabil2.setText("Peak in area")
+        self.gridLayout_PeakStab.addWidget(self.m_label_peak_stabil2, 1, 0, 1, 1)
+        self.m_spin_area_to_track = QtWidgets.QSpinBox(self.groupBox_PeakStab)
+        self.m_spin_area_to_track.setRange(1,3)
+        self.m_spin_area_to_track.setProperty("value", 2)
+        self.gridLayout_PeakStab.addWidget(self.m_spin_area_to_track, 1, 1, 1, 1)
+
+        #Step size
+        self.m_label_peak_stabil_step_size = QtWidgets.QLabel(self.groupBox_PeakStab)
+        self.m_label_peak_stabil_step_size.setText("Step size")
+        self.gridLayout_PeakStab.addWidget(self.m_label_peak_stabil_step_size, 2, 0, 1, 1)
+        self.m_spin_peak_stabil_step_size = QtWidgets.QSpinBox(self.groupBox_PeakStab)
+        self.m_spin_peak_stabil_step_size.setMinimum(1)
+        self.m_spin_peak_stabil_step_size.setMaximum(32)
+        self.gridLayout_PeakStab.addWidget(self.m_spin_peak_stabil_step_size, 2, 1, 1, 1)
+
+        #Avg frames for search
+        self.m_label_peak_stabil1 = QtWidgets.QLabel(self.groupBox_PeakStab)
+        self.m_label_peak_stabil1.setText("Avg frames for search")
+        self.gridLayout_PeakStab.addWidget(self.m_label_peak_stabil1, 1, 2, 1, 1)
+        self.m_spin_compensate_avg_frames = QtWidgets.QSpinBox(self.groupBox_PeakStab)
+        self.m_spin_compensate_avg_frames.setMaximum(600)
+        self.m_spin_compensate_avg_frames.setProperty("value", 60)
+        self.gridLayout_PeakStab.addWidget(self.m_spin_compensate_avg_frames, 1, 3, 1, 1)
+
+        #keep on channel
+        self.m_label_peak_stabil3 = QtWidgets.QLabel(self.groupBox_PeakStab)
+        self.m_label_peak_stabil3.setText("keep on channel")
+        self.gridLayout_PeakStab.addWidget(self.m_label_peak_stabil3, 2, 2, 1, 1)
+        self.m_spin_keep_channel = QtWidgets.QSpinBox(self.groupBox_PeakStab)
+        self.m_spin_keep_channel.setMaximum(1023)
+        self.m_spin_keep_channel.setProperty("value", 150)
+        self.gridLayout_PeakStab.addWidget(self.m_spin_keep_channel, 2, 3, 1, 1)
+
+        #Peak found on channel
+        self.m_label_peak_stabil4 = QtWidgets.QLabel(self.groupBox_PeakStab)
+        self.m_label_peak_stabil4.setText("Peak found on channel")
+        self.gridLayout_PeakStab.addWidget(self.m_label_peak_stabil4, 0, 1, 1, 1)
+        self.m_label_peak_stabil_channel = QtWidgets.QLabel(self.groupBox_PeakStab)
+        self.m_label_peak_stabil_channel.setText("0.00")
+        self.gridLayout_PeakStab.addWidget(self.m_label_peak_stabil_channel, 0, 2, 1, 1)
+
+        self.layout.addWidget(self.groupBox_PeakStab)
+        self.setLayout(self.layout)
+        self.setMaximumHeight(400)
+
+class PlTrend(PlotWidget):
+    def __init__(self):
+        super().__init__()
+        self.setupUI()
+
+        self.is_dumping = False
+        self.waves_to_dump = 1
+        self.dataset = np.array([0] * 1024)
+        self.bins = np.array( range(0, len(self.dataset)))
+        self.pen = pg.mkPen(color=(10, 0, 250))
+        self.pltgraph = self.plot(self.bins, self.dataset, name="Test", pen = self.pen )
+
+    def setupUI(self):
+        self.setBackground('w')
+        self.enableAutoRange(axis='x')
+        self.setXRange(0, 1, padding=0)
+        self.setYRange(-20, 100, padding=0)
+        self.setMouseEnabled(x=True, y=True)
+        self.setLimits(xMin=0)
+        self.setLabel('left', 'Counts') 
+        self.setLabel('bottom', 'Frame number')  
+        self.showGrid(x=True, y=True, alpha=0.5)
+        self.setTitle("Peak integrals")
+        self.addLegend()
+
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(5)
+        sizePolicy.setVerticalStretch(2)
+        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
+        self.setSizePolicy(sizePolicy)
+        #self.setFixedHeight(150)
+
+
 
 
 class SpectraDAQ(QObject):
