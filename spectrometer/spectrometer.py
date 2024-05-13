@@ -119,12 +119,16 @@ class SpectraDAQ(QObject):
         super().__init__()
         self.devicesMap = devicesMap
         self.isContinuous = isCont
+        self.setStop = False
 
     @pyqtSlot()
     def run(self):
         self.get_spectrum(self.nEntries)
+        self.setStop = False
         print("Data acquisition finished")
         self.finished.emit()
+
+
 
     def get_spectrum(self, nEntries):
         data = dict()
@@ -144,3 +148,7 @@ class SpectraDAQ(QObject):
                     else:
                         device.channels[chan].data = dataChunk
             self.signal_dataReady.emit(self.devicesMap, (entry+1))
+
+            if self.setStop:                          
+                self.setStop = False
+                break

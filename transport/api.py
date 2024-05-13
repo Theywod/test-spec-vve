@@ -719,7 +719,7 @@ class api(QObject):
                 #self.logger.debug("dump_wave() " + str(wave))
                 self.signal_upd_wave.emit(wave)
                 time.sleep(0.05)
-        self.disconnect()
+        #self.disconnect()
         
 
     #--------------------------------------------------------------------------------
