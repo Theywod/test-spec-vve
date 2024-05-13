@@ -30,6 +30,7 @@ import oscilloscope.oscilloscope as oscope
 import spectrometer.spectrometer as spmeter
 
 from spectrometer.spectrometer import SpectraDAQ
+from analitics.analitics import Analitics
 
 from transport import api, api_param
 from devices.devices import DeviceConn_MasterSlave, DevicesMap, Device, Channel, ChannelWindow, BoardsManager, BoardWindow
