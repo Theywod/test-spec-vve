@@ -66,7 +66,8 @@ class BoardWindow(QWidget):
 class BoardsManager(QTabWidget):
     def __init__(self):
         super().__init__()
-        self.setMinimumSize(450,200)
+        self.setMinimumHeight(250)
+        self.setFixedWidth(450)
         self.setEnabled(True)
 
 

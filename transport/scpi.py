@@ -192,8 +192,15 @@ class scpi(QObject):
         try:
             reply_size = samples_num*4
             size = 0
-            msg = self.client.write(SCPI_WAVE_DUMP + str(channel_id) +", "+ str(samples_num))
+            #msg = self.client.write(SCPI_WAVE_DUMP + str(channel_id) +", "+ str(samples_num)\
+            #                        +", " + str(10000))
+            msg = self.client.write("WAVE? " + str(channel_id) +", "+ str(samples_num)\
+                        +", " + str(10000))
+            
+            #dd = self.client.read_raw().decode('utf-8').rstrip()
             data = self.client.read_binary_values(datatype='i', is_big_endian=True)
+            #print(dd)
+
             return data
         except Exception as e:
             self.logger.error('Exception read_wave: ' + str(e))
