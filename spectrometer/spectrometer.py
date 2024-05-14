@@ -272,7 +272,7 @@ class SpectraDAQ(QObject):
                     dataChunk = data[device.ip][chan*1027:(chan+1)*1027-3]
                     if self.isContinuous:
                         device.channels[chan].data = np.add(device.channels[chan].data, dataChunk)
-                        #self.m_graphWidget.dataSets = self.m_graphWidget.addPlot(device.channels[chan].name)
+                        #self.m_sp_plotter.dataSets = self.m_sp_plotter.addPlot(device.channels[chan].name)
                     else:
                         device.channels[chan].data = dataChunk
             self.signal_dataReady.emit(self.devicesMap, (entry+1))

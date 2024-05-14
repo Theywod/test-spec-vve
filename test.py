@@ -8,6 +8,7 @@
 
 import sys
 import os
+import pyqtgraph as pg
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, 
@@ -37,6 +38,8 @@ from devices.devices import DeviceConn_MasterSlave, DevicesMap, Device, Channel,
 
 import numpy as np
 
+from analitics.analitics import Analitics
+
 class MainWindow(QMainWindow):
     signal_dump_wave     = pyqtSignal(object, object, object)
 
@@ -47,13 +50,13 @@ class MainWindow(QMainWindow):
         self.transport_param = {'comname':'', 'speed':'', 'stopbits':'', 'ip':'', 'user':'', 'password':'', 'transport':2, 'port':5000}
         self.daq_cont = {'runned':False, 'need_reset':True, 'dumping_wave':False}
         self.settings = {'ip':'192.168.0.20', 'port':5000}
-        """
+        
         # Create Analitics class        
         self.analitics_thread = QThread()
         self.analitics = Analitics()
         self.analitics.moveToThread(self.analitics_thread)        
         self.analitics.signal_analitics_done.connect(self.analize_isDone)
-        """
+        
         self.board_thread = QThread()
         self.thr_daq = QThread()
 
@@ -70,7 +73,7 @@ class MainWindow(QMainWindow):
 
         #Run thread
         self.board_thread.start()
-        #self.analitics_thread.start()  
+        self.analitics_thread.start()  
 
         self.worker = SpectraDAQ(self.devicesMap, True)
         self.worker.moveToThread(self.thr_daq)
@@ -85,6 +88,110 @@ class MainWindow(QMainWindow):
         self.daqwidget.btn_interrupt.clicked.connect(self.setStop)     
         self.m_specWidget.btn_clear.clicked.connect(self.clear_spec)
         self.m_sumSpectrometer.btn_clear.clicked.connect(self.clear_spec)
+
+    def analize_data(self, data):
+        self.analitics.addData(data)
+
+    #--------------------------------------------------------------------------------
+    #
+    #--------------------------------------------------------------------------------
+    def analize_isDone(self, data):
+        if data['algorithm'] == 'peak_search':
+            target_peak = self.m_spin_keep_channel.value()
+            current_peak = data['peak_channel']
+            avg_frames = self.m_spin_compensate_avg_frames.value()
+            
+            self.m_label_peak_stabil_channel.setText(str(current_peak))
+            self.trends_peak.append(current_peak)
+            """
+            if len(self.trends_peak) > avg_frames:
+                current_frame = len(self.trends_peak)
+                frames_after_last_dac_apply = current_frame - self.last_apply_dac_frame
+                
+                avg_peak = np.mean(self.trends_peak[-avg_frames:])
+                diff = avg_peak - target_peak
+                
+                bias_old = self.m_daq_0_1.value()
+                #bias_old = self.m_daq_0_0.value()
+                bias_new = bias_old;
+                
+                step_in_ticks = self.m_spin_peak_stabil_step_size.value()
+
+                if (abs(current_peak - target_peak) > 1) and (abs(diff) > 1) and (frames_after_last_dac_apply > avg_frames) and (abs(current_peak - target_peak) < 20):
+                    if diff > 0:                        
+                        bias_new = bias_new + step_in_ticks
+                        #bias_new = bias_new - 1
+                    elif diff < 0:
+                        bias_new = bias_new - step_in_ticks
+                        #bias_new = bias_new + 1
+                    self.m_daq_0_1.setValue(bias_new)
+                    #self.m_daq_0_0.setValue(bias_new)
+
+                    self.logger.debug("!!!!!!!!!!!! Tracking Peak !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                    self.logger.debug("!!!!!!!!!!!! Applying new DAC values")                    
+                    self.logger.debug("!!!!!!!!!!!! target_peak=" + str(target_peak))
+                    self.logger.debug("!!!!!!!!!!!! current_peak=" + str(current_peak))
+                    self.logger.debug("!!!!!!!!!!!! avg_peak=" + str(avg_peak))
+                    self.logger.debug("!!!!!!!!!!!! avg_frames=" + str(avg_frames))
+                    self.logger.debug("!!!!!!!!!!!! frames_after_last_dac_apply=" + str(frames_after_last_dac_apply))
+                    self.logger.debug("!!!!!!!!!!!! bias_old=" + str(bias_old) + " bias_new=" + str(bias_new))
+                    self.load_dac_preset()
+            
+            if (self.m_check_plot.isChecked()):
+                m = 1
+                if self.m_check_rewrite.isChecked():
+                    m = 1
+                else:
+                    trend1 = np.array(self.trends_to_plot[0::3])
+                    m = len(trend1)             
+                self.m_sp_plotter.plot(data['smoothed_data']*m, pen = pg.mkPen('b', width=3))
+            
+            #self.fh_csv_peaks_trends = open(data_dir + '/' + filename, "w")
+            if self.m_check_save_to_file.isChecked():
+                array_to_save = [0]*6
+                array_to_save[0:2] = data['peaks_in_areas']
+                array_to_save[3] = self.m_daq_0_0.value()
+                array_to_save[4] = self.m_daq_0_1.value()
+                array_to_save[5] = self.m_daq_1_0.value()
+                array_to_save[6] = self.m_daq_1_1.value()
+                if self.csv_peaks_trends:
+                    self.csv_peaks_trends.writerow(array_to_save)
+            """
+        else:
+            #print(data)
+            #print(data[0][3])
+            self.analitics.foundedGausses.append(data[0][2])
+            self.analitics.foundedGausses.append(data[1][2])
+            self.analitics.foundedGausses.append(data[2][2])
+
+            self.analitics.foundedGausses.append(data[0][3])
+            self.analitics.foundedGausses.append(data[1][3])
+            self.analitics.foundedGausses.append(data[2][3])
+            
+            if (self.m_check_plot.isChecked()):            
+                # self.pl_trends.plot(self.analitics.foundedGausses[0::6], pen=pg.mkPen({'color': "#aaa", 'width': 3}), name="Peak 1 sum +/-2sigma")
+                # self.pl_trends.plot(self.analitics.foundedGausses[1::6], pen=pg.mkPen({'color': "#F00", 'width': 3}), name="Peak 2 sum +/-2sigma")
+                # self.pl_trends.plot(self.analitics.foundedGausses[2::6], pen=pg.mkPen({'color': "#0F0", 'width': 3}), name="Peak 3 sum +/-2sigma")
+                
+                self.pl_trends.plot(self.analitics.foundedGausses[3::6], pen=pg.mkPen({'color': "#999", 'width': 1}), name="Peak fit 1")
+                self.pl_trends.plot(self.analitics.foundedGausses[4::6], pen=pg.mkPen({'color': "#F44", 'width': 1}), name="Peak fit 2")
+                self.pl_trends.plot(self.analitics.foundedGausses[5::6], pen=pg.mkPen({'color': "#4F4", 'width': 1}), name="Peak fit 3")
+
+                self.pl_trends.enableAutoRange(axis='x')
+                self.pl_trends.setAutoVisible(x=True)
+            
+            if (self.m_check_plot.isChecked()):
+                sums = []  
+                for g in data:
+                    gData = self.gauss(g[0], g[1], g[2])                
+                    sums.append(sum(gData))
+                    self.m_sp_plotter.plot(gData, pen = pg.mkPen('k', width=2))
+
+                data_ = np.array(self.analitics.lastData)
+                dataLength = data_.shape[0]
+                g1_ = self.gauss1D(dataLength, 10.0)
+                c_ = np.convolve(data_, g1_, 'same')
+                self.m_sp_plotter.plot(c_, pen = pg.mkPen('b', width=2))
 
     def clear_spec(self):
         for device in self.devicesMap.values():
