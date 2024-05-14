@@ -57,6 +57,7 @@ class MainWindow(QMainWindow):
         self.analitics.moveToThread(self.analitics_thread)        
         self.analitics.signal_analitics_done.connect(self.analize_isDone)
         
+        # Create board class
         self.board_thread = QThread()
         self.thr_daq = QThread()
 
@@ -89,13 +90,17 @@ class MainWindow(QMainWindow):
         self.m_specWidget.btn_clear.clicked.connect(self.clear_spec)
         self.m_sumSpectrometer.btn_clear.clicked.connect(self.clear_spec)
 
-    def analize_data(self, data):
+        self.trends_peak = []
+        #self.last_apply_dac_frame = 0
+        self.trends_to_plot = []
+
+    def analize_data(self, data): #self.board.signal_upd_graph.connect(self.analize_data)
         self.analitics.addData(data)
 
     #--------------------------------------------------------------------------------
     #
     #--------------------------------------------------------------------------------
-    def analize_isDone(self, data):
+    def analize_isDone(self, data): #self.analitics.signal_analitics_done.connect(self.analize_isDone)
         if data['algorithm'] == 'peak_search':
             target_peak = self.m_spin_keep_channel.value()
             current_peak = data['peak_channel']
@@ -103,6 +108,7 @@ class MainWindow(QMainWindow):
             
             self.m_label_peak_stabil_channel.setText(str(current_peak))
             self.trends_peak.append(current_peak)
+            
             """
             if len(self.trends_peak) > avg_frames:
                 current_frame = len(self.trends_peak)
@@ -126,7 +132,7 @@ class MainWindow(QMainWindow):
                         #bias_new = bias_new + 1
                     self.m_daq_0_1.setValue(bias_new)
                     #self.m_daq_0_0.setValue(bias_new)
-
+                    
                     self.logger.debug("!!!!!!!!!!!! Tracking Peak !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                     self.logger.debug("!!!!!!!!!!!! Applying new DAC values")                    
                     self.logger.debug("!!!!!!!!!!!! target_peak=" + str(target_peak))
@@ -136,16 +142,14 @@ class MainWindow(QMainWindow):
                     self.logger.debug("!!!!!!!!!!!! frames_after_last_dac_apply=" + str(frames_after_last_dac_apply))
                     self.logger.debug("!!!!!!!!!!!! bias_old=" + str(bias_old) + " bias_new=" + str(bias_new))
                     self.load_dac_preset()
+            """
             
-            if (self.m_check_plot.isChecked()):
+            if (self.chk_enableTrends.isChecked()):
                 m = 1
-                if self.m_check_rewrite.isChecked():
-                    m = 1
-                else:
-                    trend1 = np.array(self.trends_to_plot[0::3])
-                    m = len(trend1)             
+                trend1 = np.array(self.trends_to_plot[0::3])
+                m = len(trend1)             
                 self.m_sp_plotter.plot(data['smoothed_data']*m, pen = pg.mkPen('b', width=3))
-            
+            """
             #self.fh_csv_peaks_trends = open(data_dir + '/' + filename, "w")
             if self.m_check_save_to_file.isChecked():
                 array_to_save = [0]*6
@@ -168,7 +172,7 @@ class MainWindow(QMainWindow):
             self.analitics.foundedGausses.append(data[1][3])
             self.analitics.foundedGausses.append(data[2][3])
             
-            if (self.m_check_plot.isChecked()):            
+            if (self.chk_enableTrends.isChecked()):            
                 # self.pl_trends.plot(self.analitics.foundedGausses[0::6], pen=pg.mkPen({'color': "#aaa", 'width': 3}), name="Peak 1 sum +/-2sigma")
                 # self.pl_trends.plot(self.analitics.foundedGausses[1::6], pen=pg.mkPen({'color': "#F00", 'width': 3}), name="Peak 2 sum +/-2sigma")
                 # self.pl_trends.plot(self.analitics.foundedGausses[2::6], pen=pg.mkPen({'color': "#0F0", 'width': 3}), name="Peak 3 sum +/-2sigma")
@@ -180,7 +184,7 @@ class MainWindow(QMainWindow):
                 self.pl_trends.enableAutoRange(axis='x')
                 self.pl_trends.setAutoVisible(x=True)
             
-            if (self.m_check_plot.isChecked()):
+            if (self.chk_enableTrends.isChecked()):
                 sums = []  
                 for g in data:
                     gData = self.gauss(g[0], g[1], g[2])                
