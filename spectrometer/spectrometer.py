@@ -260,8 +260,11 @@ class SpectraDAQ(QObject):
 
     def get_spectrum(self, nEntries):
         data = dict()
+        self.settings = {'ip':'192.168.0.20', 'port':5000}
         for entry in range(nEntries):
             for device in self.devicesMap.values():
+                self.settings["ip"] = device.ip
+                device.board.connect(self.settings)
                 device.board.transport.client.write('SPEC?')             #query spectra
                 data.update({device.ip: device.board.transport.read_data()})  #get spectra from device
                 #for each channel data length is 1024 bytes + 3 bytes per channel + 6 ending bytes after the whole data array

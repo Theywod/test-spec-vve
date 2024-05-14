@@ -39,9 +39,46 @@ class ChannelWindow(QWidget):
         self.channel_id = QLabel("")
         self.isChannelActive = QCheckBox("Channel is active")
         self.isChannelActive.setChecked(False)
+
+        self.grid_chProps = QGridLayout()
+
+        self.lbl_threshold_capt = QLabel("Threshold value")
+        self.lne_threshold = QSpinBox()
+        self.lbl_threshold_ticks = QLabel("0")
+        self.chk_hyst = QCheckBox("Enable hystheresis")
+
+        self.lbl_gate_start = QLabel("Gate start, bins")
+        self.lne_gate_start = QSpinBox()
+        self.lbl_gate_end = QLabel("Gate end, bins")
+        self.lne_gate_end = QSpinBox()
+        self.lbl_movavg = QLabel("Moving average, bins")
+        self.lne_gate_movavg = QSpinBox()
+
+        self.lbl_bline = QLabel("Baseline value")
+        self.lne_bline = QSpinBox()
+        self.lbl_bline_ticks = QLabel("0")
+
+        self.grid_chProps.addWidget(self.channel_id, 0, 0, 1, 1)
+        self.grid_chProps.addWidget(self.isChannelActive, 0, 1, 1, 1)
+
+        self.grid_chProps.addWidget(self.lbl_threshold_capt, 1, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_threshold, 1, 1, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_threshold_ticks, 1, 2, 1, 1)
+        self.grid_chProps.addWidget(self.chk_hyst, 2, 0, 1, 1)
+
+        self.grid_chProps.addWidget(self.lbl_gate_start, 3, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_gate_start, 3, 1, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_gate_end, 4, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_gate_end, 4, 1, 1, 1)
+
+        self.grid_chProps.addWidget(self.lbl_movavg, 5, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_gate_movavg, 5, 1, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_bline, 6, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_bline, 6, 1, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_bline_ticks, 6, 2, 1, 1)
+
         layout = QVBoxLayout(self)
-        layout.addWidget(self.channel_id)
-        layout.addWidget(self.isChannelActive)
+        layout.addLayout(self.grid_chProps)
         layout.addStretch()
 
         self.setLayout(layout)
