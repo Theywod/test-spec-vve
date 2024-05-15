@@ -15,7 +15,7 @@ import re
 import numpy as np
 from PyQt5.QtCore import Qt, pyqtSignal, QSettings, QObject, pyqtSlot
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QPushButton, QHBoxLayout, QLabel, QCheckBox
+from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QPushButton, QHBoxLayout, QLabel, QCheckBox, QTabWidget
 from pyqt_instruments import ui_data_saver
 from pyqtgraph import PlotWidget
 
@@ -128,9 +128,9 @@ class PeakTrends(QWidget):
     def __init__(self):
         super().__init__()
         self.pl_trends = PlTrend()
-        self.trParams = TrendsParams()
+        self.tabwid = TabWid()
+        #self.trParams = TrendsParams()
         self.setupUI()
-
 
     def setupUI(self):
         self.layout = QVBoxLayout()
@@ -140,11 +140,22 @@ class PeakTrends(QWidget):
         #self.trParams.setEnabled(False)
 
         #self.layout.addWidget(self.chk_enable)
-        self.layout.addWidget(self.trParams)
+        self.layout.addWidget(self.tabwid)
         self.layout.addWidget(self.pl_trends)
         self.setLayout(self.layout)
         self.setMaximumHeight(400)
 
+class TabWid(QTabWidget):
+    def __init__(self):
+        super().__init__()
+        self.tab_TrendsParams = TrendsParams()
+        self.tab_PeakArea = PeakArea()
+        self.setupUI()
+
+    def setupUI(self):
+        self.setTabPosition(QTabWidget.North)
+        self.addTab(self.tab_TrendsParams, "Peak stabilization")
+        self.addTab(self.tab_PeakArea, "Peak area")
 
 class TrendsParams(QWidget):
     def __init__(self):
@@ -153,7 +164,7 @@ class TrendsParams(QWidget):
     def setupUI(self):
         self.layout = QVBoxLayout()
         self.groupBox_PeakStab = QtWidgets.QGroupBox()
-        self.groupBox_PeakStab.setTitle("Peak stabilization")
+        #self.groupBox_PeakStab.setTitle("Peak stabilization")
         self.gridLayout_PeakStab = QtWidgets.QGridLayout(self.groupBox_PeakStab)
 
         #Peak in area
@@ -201,6 +212,34 @@ class TrendsParams(QWidget):
         self.gridLayout_PeakStab.addWidget(self.m_label_peak_stabil_channel, 0, 2, 1, 1)
 
         self.layout.addWidget(self.groupBox_PeakStab)
+        self.setLayout(self.layout)
+        self.setMaximumHeight(400)
+
+class PeakArea(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setupUI()
+    def setupUI(self):
+        self.layout = QVBoxLayout()
+        self.groupBox_PeakArea = QtWidgets.QGroupBox()
+        self.gridLayout_PeakArea = QtWidgets.QGridLayout(self.groupBox_PeakArea)
+
+        #Peak area
+        self.label_peak_area = QtWidgets.QLabel(self.groupBox_PeakArea)
+        self.label_peak_area.setText("Peak area")
+        self.gridLayout_PeakArea.addWidget(self.label_peak_area, 0, 0, 1, 1)
+            #begin
+        self.spin_peak_area_begin = QtWidgets.QSpinBox(self.groupBox_PeakArea)
+        self.spin_peak_area_begin.setRange(0,999)
+        self.spin_peak_area_begin.setProperty("value", 150)
+        self.gridLayout_PeakArea.addWidget(self.spin_peak_area_begin, 0, 1, 1, 1)
+            #end
+        self.spin_peak_area_end = QtWidgets.QSpinBox(self.groupBox_PeakArea)
+        self.spin_peak_area_end.setRange(0,999)
+        self.spin_peak_area_end.setProperty("value", 300)
+        self.gridLayout_PeakArea.addWidget(self.spin_peak_area_end, 0, 2, 1, 1)
+
+        self.layout.addWidget(self.groupBox_PeakArea)
         self.setLayout(self.layout)
         self.setMaximumHeight(400)
 
