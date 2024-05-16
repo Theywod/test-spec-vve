@@ -13,11 +13,13 @@ import csv
 import logging
 import re
 import numpy as np
+from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, pyqtSignal, QSettings, QObject, pyqtSlot
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QPushButton, QHBoxLayout, QLabel, QCheckBox
+from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QPushButton, QHBoxLayout, QLabel, QCheckBox, QTabWidget, QSpacerItem
 from pyqt_instruments import ui_data_saver
 from pyqtgraph import PlotWidget
+from PyQt5.QtGui import QFont
 
 import pyqtgraph as pg
 
@@ -28,6 +30,7 @@ class Spectrometer(QWidget):
         super().__init__()
         self.m_sp_plotter = PlSpectrometer()
         self.trends = PeakTrends()
+        
         self.setupUI()
 
         self.devicesMap = None
@@ -37,12 +40,29 @@ class Spectrometer(QWidget):
         self.btn_replot_act.clicked.connect(self.replot)
         self.chk_enableTrends.stateChanged.connect(self.enableTrends)
 
+        #ROI changing
+        self.m_sp_plotter.region_peak.sigRegionChanged.connect(self.regionUpdated)
+        self.trends.tabwid.tab_PeakArea.spin_peak_area_begin.sigValueChanging.connect(self.spinUpdated)
+        self.trends.tabwid.tab_PeakArea.spin_peak_area_end.sigValueChanging.connect(self.spinUpdated)
+
+    def regionUpdated(self):
+        lo,hi = self.m_sp_plotter.region_peak.getRegion()
+        #print (lo,hi)
+        self.trends.tabwid.tab_PeakArea.spin_peak_area_begin.setValue(int(lo))
+        self.trends.tabwid.tab_PeakArea.spin_peak_area_end.setValue(int(hi))
+    
+    def spinUpdated(self):
+        rng = []
+        rng.append(self.trends.tabwid.tab_PeakArea.spin_peak_area_begin.value())
+        rng.append(self.trends.tabwid.tab_PeakArea.spin_peak_area_end.value())
+        #print(rng)
+        self.m_sp_plotter.region_peak.setRegion(rng)
+
     def enableTrends(self):
         if self.chk_enableTrends.isChecked():
             self.trends.setHidden(False)
         else:
             self.trends.setHidden(True)
-
 
     def setupUI(self):
         self.btn_clear = QPushButton("Clear plot")
@@ -104,6 +124,17 @@ class PlSpectrometer(PlotWidget):
 
     def __init__(self):
         super().__init__()
+
+        #ROI
+        self.region_peak = pg.LinearRegionItem(brush=(50,50,200,25), values=[150, 300], bounds=[0, 1000])
+        self.label0 = pg.InfLineLabel(self.region_peak.lines[1], "None", position=0.95, rotateAxis=(0,0), anchor=(1, 1))
+        font = QFont()
+        font.setFamily("FreeMono")
+        font.setPointSize(10)
+        font.setBold(True)
+        self.label0.setFont(font)
+        self.addItem(self.region_peak, ignoreBounds=True)
+
         self.setBackground('w')
         self.setXRange(0, 1024, padding=0)
         self.setYRange(0, 100, padding=0)
@@ -128,9 +159,9 @@ class PeakTrends(QWidget):
     def __init__(self):
         super().__init__()
         self.pl_trends = PlTrend()
-        self.trParams = TrendsParams()
+        self.tabwid = TabWid()
+        #self.trParams = TrendsParams()
         self.setupUI()
-
 
     def setupUI(self):
         self.layout = QVBoxLayout()
@@ -140,11 +171,22 @@ class PeakTrends(QWidget):
         #self.trParams.setEnabled(False)
 
         #self.layout.addWidget(self.chk_enable)
-        self.layout.addWidget(self.trParams)
+        self.layout.addWidget(self.tabwid)
         self.layout.addWidget(self.pl_trends)
         self.setLayout(self.layout)
         self.setMaximumHeight(400)
 
+class TabWid(QTabWidget):
+    def __init__(self):
+        super().__init__()
+        self.tab_TrendsParams = TrendsParams()
+        self.tab_PeakArea = PeakArea()
+        self.setupUI()
+
+    def setupUI(self):
+        self.setTabPosition(QTabWidget.North)
+        self.addTab(self.tab_TrendsParams, "Peak stabilization")
+        self.addTab(self.tab_PeakArea, "Peak area")
 
 class TrendsParams(QWidget):
     def __init__(self):
@@ -153,7 +195,7 @@ class TrendsParams(QWidget):
     def setupUI(self):
         self.layout = QVBoxLayout()
         self.groupBox_PeakStab = QtWidgets.QGroupBox()
-        self.groupBox_PeakStab.setTitle("Peak stabilization")
+        #self.groupBox_PeakStab.setTitle("Peak stabilization")
         self.gridLayout_PeakStab = QtWidgets.QGridLayout(self.groupBox_PeakStab)
 
         #Peak in area
@@ -203,6 +245,47 @@ class TrendsParams(QWidget):
         self.layout.addWidget(self.groupBox_PeakStab)
         self.setLayout(self.layout)
         self.setMaximumHeight(400)
+
+class PeakArea(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setupUI()
+    def setupUI(self):
+        self.layout = QVBoxLayout()
+        self.groupBox_PeakArea = QtWidgets.QGroupBox()
+        self.gridLayout_PeakArea = QtWidgets.QGridLayout(self.groupBox_PeakArea)
+
+        #Peak area
+        self.label_peak_area = QtWidgets.QLabel(self.groupBox_PeakArea)
+        self.label_peak_area.setText("Peak area")
+        self.label_peak_area.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignLeading|QtCore.Qt.AlignVCenter)
+        self.gridLayout_PeakArea.addWidget(self.label_peak_area, 0, 0, 1, 1)
+            #begin
+        #self.spin_peak_area_begin = QtWidgets.QSpinBox(self.groupBox_PeakArea)
+        self.spin_peak_area_begin = pg.SpinBox(self.groupBox_PeakArea)
+        self.spin_peak_area_begin.setRange(0,999)
+        self.spin_peak_area_begin.setProperty("value", 150)
+        self.spin_peak_area_begin.setOpts(step = 1)
+        self.gridLayout_PeakArea.addWidget(self.spin_peak_area_begin, 0, 1, 1, 1)
+            #end
+        #self.spin_peak_area_end = QtWidgets.QSpinBox(self.groupBox_PeakArea)
+        self.spin_peak_area_end = pg.SpinBox(self.groupBox_PeakArea)
+        self.spin_peak_area_end.setRange(0,999)
+        self.spin_peak_area_end.setProperty("value", 300)
+        self.spin_peak_area_end.setOpts(step = 1)
+        self.gridLayout_PeakArea.addWidget(self.spin_peak_area_end, 0, 2, 1, 1)
+
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        self.spin_peak_area_begin.setSizePolicy(sizePolicy)
+        self.spin_peak_area_begin.setMinimumSize(QtCore.QSize(25, 25))
+        
+        self.spin_peak_area_end.setSizePolicy(sizePolicy)
+        self.spin_peak_area_end.setMinimumSize(QtCore.QSize(25, 25))
+
+        self.layout.addWidget(self.groupBox_PeakArea)
+        self.setLayout(self.layout)
+        self.setMaximumHeight(400)
+        #self.setMaximumWidth(400)
 
 class PlTrend(PlotWidget):
     def __init__(self):
@@ -275,7 +358,7 @@ class SpectraDAQ(QObject):
                     dataChunk = data[device.ip][chan*1027:(chan+1)*1027-3]
                     if self.isContinuous:
                         device.channels[chan].data = np.add(device.channels[chan].data, dataChunk)
-                        #self.m_graphWidget.dataSets = self.m_graphWidget.addPlot(device.channels[chan].name)
+                        #self.m_sp_plotter.dataSets = self.m_sp_plotter.addPlot(device.channels[chan].name)
                     else:
                         device.channels[chan].data = dataChunk
             self.signal_dataReady.emit(self.devicesMap, (entry+1))

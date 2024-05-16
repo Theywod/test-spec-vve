@@ -44,7 +44,7 @@ class OscilloscopeW(QtWidgets.QWidget, Ui_WaveformWidget):
         
         self.m_plot_oscilloscope.showGrid(x=True, y=True, alpha=0.5)
         self.m_plot_oscilloscope.setTitle("Wave form")
-        #self.m_threadWidget.setAutoVisible(x=False, y=False)
+        #self.pl_trends.setAutoVisible(x=False, y=False)
         self.m_plot_oscilloscope.addLegend()
         
         self.adc_step = 1/8192*1000
