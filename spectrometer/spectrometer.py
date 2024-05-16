@@ -113,6 +113,7 @@ class Spectrometer(QWidget):
         counts = np.array(dataSum)          
         if self.useSum:
             self.m_sp_plotter.plot(bins,counts, pen = self.m_sp_plotter.pen, name = "Summary spectrum")
+        self.m_sp_plotter.addItem(self.m_sp_plotter.region_peak, ignoreBounds=True)
         
         self.lbl_entries.setText("{0} frames".format(entry))
 
