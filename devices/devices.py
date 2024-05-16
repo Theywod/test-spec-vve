@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QWidget, QVBoxLayout, QGroupBox,
     QLineEdit, QGridLayout, QTableWidget,
     QListWidget, QTableWidgetItem, QComboBox,
-    QHBoxLayout, QTabWidget, QToolBar, QCheckBox, QSpacerItem
+    QHBoxLayout, QTabWidget, QToolBar, QCheckBox, QSpacerItem, QDoubleSpinBox
 )
 from PyQt5.QtCore import (
     pyqtSignal, QThread, 
@@ -25,6 +25,24 @@ from PyQt5.QtCore import (
 from PyQt5.QtGui import (
     QPixmap, QFont, QIcon
 )
+
+def conv_v_to_adc(val):
+    adc_v_pp = 2
+    adc_bitwidth = 2**14
+
+    #self.adc_step = 1/8192*1000
+
+    res = val * adc_bitwidth / adc_v_pp
+
+    return int(res)
+
+def conv_adc_to_v(val):
+    adc_v_pp = 2
+    adc_bitwidth = 2**14        
+    res = adc_v_pp * val / adc_bitwidth
+
+    return res
+
 
 #Roles: master/slave
 class RolesList(QComboBox):
@@ -36,28 +54,43 @@ class RolesList(QComboBox):
 class ChannelWindow(QWidget):
     def __init__(self):
         super().__init__()
+        self.setupUI()
+        #calculates value of threshold in adc ticks
+        self.lne_threshold.valueChanged.connect(lambda: self.lbl_threshold_ticks.setText(str(conv_v_to_adc(self.lne_threshold.value()))))
+        self.lne_bline.valueChanged.connect(lambda: self.lbl_bline_ticks.setText(str(conv_v_to_adc(self.lne_bline.value()))))
+
+
+    def setupUI(self):
         self.channel_id = QLabel("")
         self.isChannelActive = QCheckBox("Channel is active")
         self.isChannelActive.setChecked(False)
 
         self.grid_chProps = QGridLayout()
 
+        #threshold settings
         self.lbl_threshold_capt = QLabel("Threshold value")
-        self.lne_threshold = QSpinBox()
+        self.lne_threshold = QDoubleSpinBox()
+        self.lne_threshold.setSingleStep(1e-3)
+        self.lne_threshold.setDecimals(3)
         self.lbl_threshold_ticks = QLabel("0")
         self.chk_hyst = QCheckBox("Enable hystheresis")
-
+        #gate settings
         self.lbl_gate_start = QLabel("Gate start, bins")
         self.lne_gate_start = QSpinBox()
+        self.lne_gate_start.setRange(0,255)
         self.lbl_gate_end = QLabel("Gate end, bins")
         self.lne_gate_end = QSpinBox()
+        self.lne_gate_end.setRange(0,255)
         self.lbl_movavg = QLabel("Moving average, bins")
         self.lne_gate_movavg = QSpinBox()
-
+        self.lne_gate_movavg.setRange(0,255)
+        #baseline settings
         self.lbl_bline = QLabel("Baseline value")
-        self.lne_bline = QSpinBox()
+        self.lne_bline = QDoubleSpinBox()
+        self.lne_bline.setSingleStep(1e-3)
+        self.lne_bline.setDecimals(3)
         self.lbl_bline_ticks = QLabel("0")
-
+        #positioning in layout
         self.grid_chProps.addWidget(self.channel_id, 0, 0, 1, 1)
         self.grid_chProps.addWidget(self.isChannelActive, 0, 1, 1, 1)
 
@@ -82,6 +115,7 @@ class ChannelWindow(QWidget):
         layout.addStretch()
 
         self.setLayout(layout)
+
     def updUI(self, channel):
         self.isChannelActive.setChecked(channel.isActive)
 
@@ -91,10 +125,12 @@ class BoardWindow(QWidget):
         super().__init__()
         self.board_ip = QLabel("")
         self.channels_tab = QTabWidget()
+        self.btn_sendData = QPushButton("Send data to board")
 
         layout = QVBoxLayout(self)
         #layout.addWidget(self.board_ip)
         layout.addWidget(self.channels_tab)
+        layout.addWidget(self.btn_sendData)
 
         self.setLayout(layout)
         self.setEnabled(True)
@@ -144,6 +180,7 @@ class Device:
         self.channels = []
         self.deviceTab = None
 
+
     def setIP(self, ip):
         self.ip = ip
     def setRole(self, role):
@@ -152,8 +189,23 @@ class Device:
         self.status = status
     def setUptime(self, uptime):
         self.uptime = uptime
+    
+    #when our device is recognized by system and its tab widget is created, make connections to deal with data from widget
     def updTab(self, value):
         self.deviceTab = value
+        self.deviceTab.btn_sendData.clicked.connect(self.sendData)
+
+    def sendData(self):
+        for chan in self.channels:
+            print("Threshold: {0}".format(chan.channelTab.lbl_threshold_ticks.text()))
+            print("Gate start: {0}".format(chan.channelTab.lne_gate_start.text()))
+            print("Gate end: {0}".format(chan.channelTab.lne_gate_end.text()))
+            print("Moving avg: {0}".format(chan.channelTab.lne_gate_movavg.text()))
+            print("Baseline: {0}".format(chan.channelTab.lbl_bline_ticks.text()))
+
+
+
+
 
 #Basic widget for connection to single device
 #contains line for device IP, connection and deletion buttons
