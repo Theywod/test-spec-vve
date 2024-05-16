@@ -59,6 +59,8 @@ class ChannelWindow(QWidget):
         self.lne_threshold.valueChanged.connect(lambda: self.lbl_threshold_ticks.setText(str(conv_v_to_adc(self.lne_threshold.value()))))
         self.lne_bline.valueChanged.connect(lambda: self.lbl_bline_ticks.setText(str(conv_v_to_adc(self.lne_bline.value()))))
 
+        self.setInitValues()
+
 
     def setupUI(self):
         self.channel_id = QLabel("")
@@ -90,6 +92,17 @@ class ChannelWindow(QWidget):
         self.lne_bline.setSingleStep(1e-3)
         self.lne_bline.setDecimals(3)
         self.lbl_bline_ticks = QLabel("0")
+        #if shield is connected, set bias voltage and amplification
+            #bias
+        self.lbl_bias_capt = QLabel("Bias voltage, ticks")
+        self.lne_bias = QSpinBox()
+        self.lne_bias.setRange(0,255)
+        self.lbl_bias = QLabel("0")
+            #amplification
+        self.lbl_ampl_capt = QLabel("Amplification, ticks")
+        self.lne_ampl = QSpinBox()
+        self.lne_ampl.setRange(0,255)
+        self.lbl_ampl = QLabel("0")
         #positioning in layout
         self.grid_chProps.addWidget(self.channel_id, 0, 0, 1, 1)
         self.grid_chProps.addWidget(self.isChannelActive, 0, 1, 1, 1)
@@ -110,6 +123,14 @@ class ChannelWindow(QWidget):
         self.grid_chProps.addWidget(self.lne_bline, 6, 1, 1, 1)
         self.grid_chProps.addWidget(self.lbl_bline_ticks, 6, 2, 1, 1)
 
+        self.grid_chProps.addWidget(self.lbl_bias_capt, 7, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_bias, 7, 1, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_bias, 7, 2, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_ampl_capt, 8, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_ampl, 8, 1, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_ampl, 8, 2, 1, 1)
+
+
         layout = QVBoxLayout(self)
         layout.addLayout(self.grid_chProps)
         layout.addStretch()
@@ -118,6 +139,15 @@ class ChannelWindow(QWidget):
 
     def updUI(self, channel):
         self.isChannelActive.setChecked(channel.isActive)
+
+    def setInitValues(self):
+        self.lne_threshold.setValue(conv_adc_to_v(250))
+        self.lne_threshold.valueChanged.emit(self.lne_threshold.value())
+        self.lne_bline.setValue(conv_adc_to_v(0))
+        self.lne_bline.valueChanged.emit(self.lne_bline.value())
+        self.lne_gate_start.setValue(0)
+        self.lne_gate_end.setValue(128)
+
 
 
 class BoardWindow(QWidget):
@@ -139,7 +169,7 @@ class BoardWindow(QWidget):
 class BoardsManager(QTabWidget):
     def __init__(self):
         super().__init__()
-        self.setMinimumHeight(250)
+        self.setMinimumHeight(350)
         self.setFixedWidth(450)
         self.setEnabled(True)
 
@@ -196,11 +226,45 @@ class Device:
         self.deviceTab.btn_sendData.clicked.connect(self.sendData)
 
     def sendData(self):
+        self.settings = {'ip':'127.0.0.1', 'port':5000}
+        self.settings['ip'] = self.ip
+        self.board.connect(self.settings)
+        self.board.transport.client.write('*IDN?')
+        print("Connected with device {0}: {1}".format(self.ip, \
+                self.board.transport.client.read_raw().decode('utf-8').rstrip()))
+
         for chan in self.channels:
+            query = "GATE{0}:THR {1}".format(chan.number,\
+                            chan.channelTab.lbl_threshold_ticks.text())
+            self.board.transport.client.write(query)
             print("Threshold: {0}".format(chan.channelTab.lbl_threshold_ticks.text()))
+
+            query = "ACQ{0}:MOVAVER:BYPASS?".format(chan.number)   
+            self.board.transport.client.write(query)
+            print("BYPASS: {0}".format(self.board.transport.client.read_raw()))
+
+            query = "ACQ{0}:MOVAVER:WIN?".format(chan.number)   
+            self.board.transport.client.write(query)
+            print("WIN: {0}".format(self.board.transport.client.read_raw()))
+
+            query = "GATE{0} {1},{2}".format(chan.number,\
+                chan.channelTab.lne_gate_start.text(),\
+                chan.channelTab.lne_gate_end.text())
+            self.board.transport.client.write(query)
             print("Gate start: {0}".format(chan.channelTab.lne_gate_start.text()))
             print("Gate end: {0}".format(chan.channelTab.lne_gate_end.text()))
+
+            query = "ACQ{0}:MOVAVER:BYPASS {1}".format(chan.number,\
+                "0")   
+            self.board.transport.client.write(query)
+            query = "ACQ{0}:MOVAVER:WIN {1}".format(chan.number,\
+                chan.channelTab.lne_gate_movavg.text())   
+            self.board.transport.client.write(query)
             print("Moving avg: {0}".format(chan.channelTab.lne_gate_movavg.text()))
+
+            query = "GATE{0}:BASELINE {1}".format(chan.number,\
+                chan.channelTab.lbl_bline_ticks.text())  
+            self.board.transport.client.write(query)           
             print("Baseline: {0}".format(chan.channelTab.lbl_bline_ticks.text()))
 
 

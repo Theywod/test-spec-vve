@@ -38,6 +38,9 @@ from devices.devices import DeviceConn_MasterSlave, DevicesMap, Device, Channel,
 
 import numpy as np
 
+from pyqt_instruments import ui_data_saver
+
+
 class MainWindow(QMainWindow):
     signal_dump_wave     = pyqtSignal(object, object, object)
 
