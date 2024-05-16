@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import (
     pyqtSignal, QThread, 
     QThreadPool, QSettings, 
-    QEvent, Qt, pyqtSlot
+    QEvent, Qt, pyqtSlot, QSettings
 )
 from PyQt5.QtGui import (
     QPixmap, QFont, QIcon
@@ -59,6 +59,9 @@ class ChannelWindow(QWidget):
         self.lne_threshold.valueChanged.connect(lambda: self.lbl_threshold_ticks.setText(str(conv_v_to_adc(self.lne_threshold.value()))))
         self.lne_bline.valueChanged.connect(lambda: self.lbl_bline_ticks.setText(str(conv_v_to_adc(self.lne_bline.value()))))
 
+        self.lne_bias.valueChanged.connect(lambda: self.lbl_bias.setText(str(self.lne_bias.value())))
+        self.lne_ampl.valueChanged.connect(lambda: self.lbl_ampl.setText(str(self.lne_ampl.value())))
+
         self.setInitValues()
 
 
@@ -66,6 +69,7 @@ class ChannelWindow(QWidget):
         self.channel_id = QLabel("")
         self.isChannelActive = QCheckBox("Channel is active")
         self.isChannelActive.setChecked(False)
+        self.chan_number = QLabel("")
 
         self.grid_chProps = QGridLayout()
 
@@ -76,6 +80,9 @@ class ChannelWindow(QWidget):
         self.lne_threshold.setDecimals(3)
         self.lbl_threshold_ticks = QLabel("0")
         self.chk_hyst = QCheckBox("Enable hystheresis")
+        self.lbl_pretrig = QLabel("Pretrigger, bins")
+        self.lne_pretrig = QSpinBox()
+        self.lne_pretrig.setRange(0,255)
         #gate settings
         self.lbl_gate_start = QLabel("Gate start, bins")
         self.lne_gate_start = QSpinBox()
@@ -106,11 +113,15 @@ class ChannelWindow(QWidget):
         #positioning in layout
         self.grid_chProps.addWidget(self.channel_id, 0, 0, 1, 1)
         self.grid_chProps.addWidget(self.isChannelActive, 0, 1, 1, 1)
+        self.grid_chProps.addWidget(self.chan_number, 0, 2, 1, 1)
+
 
         self.grid_chProps.addWidget(self.lbl_threshold_capt, 1, 0, 1, 1)
         self.grid_chProps.addWidget(self.lne_threshold, 1, 1, 1, 1)
         self.grid_chProps.addWidget(self.lbl_threshold_ticks, 1, 2, 1, 1)
-        self.grid_chProps.addWidget(self.chk_hyst, 2, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_pretrig, 2, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_pretrig, 2, 1, 1, 1)
+        self.grid_chProps.addWidget(self.chk_hyst, 2, 2, 1, 1)
 
         self.grid_chProps.addWidget(self.lbl_gate_start, 3, 0, 1, 1)
         self.grid_chProps.addWidget(self.lne_gate_start, 3, 1, 1, 1)
@@ -147,7 +158,12 @@ class ChannelWindow(QWidget):
         self.lne_bline.valueChanged.emit(self.lne_bline.value())
         self.lne_gate_start.setValue(0)
         self.lne_gate_end.setValue(128)
-
+        self.lne_pretrig.setValue(0)
+        self.lne_gate_movavg.setValue(3)
+        self.lne_bias.setValue(100)
+        self.lne_bias.valueChanged.emit(self.lne_bias.value())
+        self.lne_ampl.setValue(100)
+        self.lne_ampl.valueChanged.emit(self.lne_ampl.value())
 
 
 class BoardWindow(QWidget):
@@ -190,6 +206,7 @@ class Channel:
         print("Current status: {0}".format(self.isActive))
     def updUI(self):
         self.channelTab.isChannelActive.setChecked(self.isActive)
+        self.channelTab.chan_number.setText("On board chan. No. {0}".format(self.number))
     def connectActive(self):
         isChecked = self.channelTab.isChannelActive.isChecked
         self.channelTab.isChannelActive.stateChanged.connect(lambda: self.changeStatus(isChecked()))
@@ -209,6 +226,9 @@ class Device:
         self.nChannels = 0
         self.channels = []
         self.deviceTab = None
+        self.ini_sets = QSettings("devices.ini", QSettings.IniFormat)
+
+
 
 
     def setIP(self, ip):
@@ -225,6 +245,7 @@ class Device:
         self.deviceTab = value
         self.deviceTab.btn_sendData.clicked.connect(self.sendData)
 
+
     def sendData(self):
         self.settings = {'ip':'127.0.0.1', 'port':5000}
         self.settings['ip'] = self.ip
@@ -232,42 +253,64 @@ class Device:
         self.board.transport.client.write('*IDN?')
         print("Connected with device {0}: {1}".format(self.ip, \
                 self.board.transport.client.read_raw().decode('utf-8').rstrip()))
+        self.ini_sets.beginGroup(self.ip)
 
         for chan in self.channels:
-            query = "GATE{0}:THR {1}".format(chan.number,\
-                            chan.channelTab.lbl_threshold_ticks.text())
+            self.ini_sets.beginGroup(str(chan.number))
+
+            threshold = chan.channelTab.lbl_threshold_ticks.text()
+            pretrigger = chan.channelTab.lne_pretrig.text()
+            gate_begin = chan.channelTab.lne_gate_start.text()
+            gate_end = chan.channelTab.lne_gate_end.text()
+            movaver_bypass = 0
+            movaver_win = chan.channelTab.lne_gate_movavg.text()
+            bline = chan.channelTab.lbl_bline_ticks.text()
+            hystChecked = int(chan.channelTab.chk_hyst.checkState()/2)
+
+            query = "GATE{0}:THR {1}".format(chan.number, threshold)
             self.board.transport.client.write(query)
-            print("Threshold: {0}".format(chan.channelTab.lbl_threshold_ticks.text()))
+            self.ini_sets.setValue("threshold", threshold)
+            print("Threshold: {0}".format(threshold))
 
-            query = "ACQ{0}:MOVAVER:BYPASS?".format(chan.number)   
+            query = "GATE{0}:PRETRIG {1}".format(chan.number, pretrigger)
             self.board.transport.client.write(query)
-            print("BYPASS: {0}".format(self.board.transport.client.read_raw()))
+            self.ini_sets.setValue("pretrigger", pretrigger)
+            print("Pretrigger: {0}".format(pretrigger))
 
-            query = "ACQ{0}:MOVAVER:WIN?".format(chan.number)   
+            # query = "ACQ{0}:MOVAVER:BYPASS?".format(chan.number)   
+            # self.board.transport.client.write(query)
+            # print("BYPASS: {0}".format(self.board.transport.client.read_raw()))
+
+            # query = "ACQ{0}:MOVAVER:WIN?".format(chan.number)   
+            # self.board.transport.client.write(query)
+            # print("WIN: {0}".format(self.board.transport.client.read_raw()))
+
+            query = "GATE{0} {1},{2}".format(chan.number, gate_begin, gate_end)
             self.board.transport.client.write(query)
-            print("WIN: {0}".format(self.board.transport.client.read_raw()))
+            self.ini_sets.setValue("gate_begin", gate_begin)
+            self.ini_sets.setValue("gate_end", gate_end)
+            print("Gate start: {0}".format(gate_begin))
+            print("Gate end: {0}".format(gate_end))
 
-            query = "GATE{0} {1},{2}".format(chan.number,\
-                chan.channelTab.lne_gate_start.text(),\
-                chan.channelTab.lne_gate_end.text())
+            query = "ACQ{0}:MOVAVER:BYPASS {1}".format(chan.number, movaver_bypass)   
             self.board.transport.client.write(query)
-            print("Gate start: {0}".format(chan.channelTab.lne_gate_start.text()))
-            print("Gate end: {0}".format(chan.channelTab.lne_gate_end.text()))
-
-            query = "ACQ{0}:MOVAVER:BYPASS {1}".format(chan.number,\
-                "0")   
+            query = "ACQ{0}:MOVAVER:WIN {1}".format(chan.number, movaver_win)   
             self.board.transport.client.write(query)
-            query = "ACQ{0}:MOVAVER:WIN {1}".format(chan.number,\
-                chan.channelTab.lne_gate_movavg.text())   
-            self.board.transport.client.write(query)
-            print("Moving avg: {0}".format(chan.channelTab.lne_gate_movavg.text()))
+            self.ini_sets.setValue("movaver_bypass", movaver_bypass)
+            self.ini_sets.setValue("movaver_win", movaver_win)
+            print("Moving avg: {0}".format(movaver_win))
 
-            query = "GATE{0}:BASELINE {1}".format(chan.number,\
-                chan.channelTab.lbl_bline_ticks.text())  
-            self.board.transport.client.write(query)           
-            print("Baseline: {0}".format(chan.channelTab.lbl_bline_ticks.text()))
+            query = "GATE{0}:BASELINE {1}".format(chan.number,bline)  
+            self.board.transport.client.write(query) 
+            self.ini_sets.setValue("bline", bline)          
+            print("Baseline: {0}".format(bline))
 
-
+            query = "GATE{0}:HYST {1}".format(chan.number, hystChecked)
+            self.board.transport.client.write(query)   
+            self.ini_sets.setValue("hystChecked", hystChecked)              
+            print("Check state:{0}".format(hystChecked))  
+            self.ini_sets.endGroup()
+        self.ini_sets.endGroup()
 
 
 
