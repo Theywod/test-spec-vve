@@ -172,11 +172,17 @@ class BoardWindow(QWidget):
         self.board_ip = QLabel("")
         self.channels_tab = QTabWidget()
         self.btn_sendData = QPushButton("Send data to board")
+        self.btn_loadData = QPushButton("Load from INI")
+
 
         layout = QVBoxLayout(self)
         #layout.addWidget(self.board_ip)
         layout.addWidget(self.channels_tab)
-        layout.addWidget(self.btn_sendData)
+
+        hlayout = QHBoxLayout()
+        hlayout.addWidget(self.btn_sendData)
+        hlayout.addWidget(self.btn_loadData)
+        layout.addLayout(hlayout)
 
         self.setLayout(layout)
         self.setEnabled(True)
@@ -211,6 +217,45 @@ class Channel:
         isChecked = self.channelTab.isChannelActive.isChecked
         self.channelTab.isChannelActive.stateChanged.connect(lambda: self.changeStatus(isChecked()))
 
+class ChanParams:
+    def __init__(self):
+            self.threshold = "0"
+            self.pretrigger = "0"
+            self.gate_begin = "0"
+            self.gate_end = "0"
+            self.movaver_bypass = 0
+            self.movaver_win = "0"
+            self.bline = "0"
+            self.hystChecked = 0
+
+    def getValuesLines(self, chan):
+        self.threshold = chan.channelTab.lbl_threshold_ticks.text()
+        self.pretrigger = chan.channelTab.lne_pretrig.text()
+        self.gate_begin = chan.channelTab.lne_gate_start.text()
+        self.gate_end = chan.channelTab.lne_gate_end.text()
+        self.movaver_bypass = 0
+        self.movaver_win = chan.channelTab.lne_gate_movavg.text()
+        self.bline = chan.channelTab.lbl_bline_ticks.text()
+        self.hystChecked = int(chan.channelTab.chk_hyst.checkState()/2)
+
+    def getValuesIni(self, ini_sets, ip, chan):
+        ini_sets.beginGroup(ip)
+        ini_sets.beginGroup(str(chan))
+        print(ini_sets.allKeys())
+
+        print("{0} - {1}".format(chan, ini_sets.value("threshold")))
+        self.threshold = ini_sets.value("threshold")
+        self.pretrigger = ini_sets.value("pretrigger")
+        self.gate_begin = ini_sets.value("gate_begin")
+        self.gate_end = ini_sets.value("gate_end")
+        self.movaver_bypass = 0
+        self.movaver_win = ini_sets.value("movaver_win")
+        self.bline = ini_sets.value("bline")
+        self.hystChecked = int(ini_sets.value("hystChecked"))
+        ini_sets.endGroup()
+        ini_sets.endGroup()
+        
+        
 
 #Device describes specific board with its IP address, current role, connection status,
 #uptime, connection port, its instance in memory after connection, number of channels
@@ -227,9 +272,7 @@ class Device:
         self.channels = []
         self.deviceTab = None
         self.ini_sets = QSettings("devices.ini", QSettings.IniFormat)
-
-
-
+        self.params = ChanParams()
 
     def setIP(self, ip):
         self.ip = ip
@@ -244,6 +287,31 @@ class Device:
     def updTab(self, value):
         self.deviceTab = value
         self.deviceTab.btn_sendData.clicked.connect(self.sendData)
+        self.deviceTab.btn_loadData.clicked.connect(self.getData)
+
+    def getData(self):
+        self.settings = {'ip':'127.0.0.1', 'port':5000}
+        self.settings['ip'] = self.ip
+        self.board.connect(self.settings)
+        self.board.transport.client.write('*IDN?')
+        print("Connected with device {0}: {1}".format(self.ip, \
+                self.board.transport.client.read_raw().decode('utf-8').rstrip()))
+
+        for chan in self.channels:
+            self.params.getValuesIni(self.ini_sets, self.ip, str(chan.number))
+            chan.channelTab.lne_threshold.setValue(conv_adc_to_v(int(self.params.threshold)))
+            chan.channelTab.lne_pretrig.setValue(int(self.params.pretrigger))
+            chan.channelTab.lne_gate_start.setValue(int(self.params.gate_begin))
+            chan.channelTab.lne_gate_end.setValue(int(self.params.gate_end))
+            self.params.movaver_bypass = 0
+            chan.channelTab.lne_gate_movavg.setValue(int(self.params.movaver_win))
+            chan.channelTab.lne_bline.setValue(conv_adc_to_v(int(self.params.bline)))
+            hystChecked = False
+            if self.params.hystChecked == 1:
+                hystChecked = True
+            else:
+                hystChecked = False 
+            chan.channelTab.chk_hyst.setChecked(hystChecked)
 
 
     def sendData(self):
@@ -257,58 +325,43 @@ class Device:
 
         for chan in self.channels:
             self.ini_sets.beginGroup(str(chan.number))
+            self.params.getValuesLines(chan)
 
-            threshold = chan.channelTab.lbl_threshold_ticks.text()
-            pretrigger = chan.channelTab.lne_pretrig.text()
-            gate_begin = chan.channelTab.lne_gate_start.text()
-            gate_end = chan.channelTab.lne_gate_end.text()
-            movaver_bypass = 0
-            movaver_win = chan.channelTab.lne_gate_movavg.text()
-            bline = chan.channelTab.lbl_bline_ticks.text()
-            hystChecked = int(chan.channelTab.chk_hyst.checkState()/2)
-
-            query = "GATE{0}:THR {1}".format(chan.number, threshold)
+            query = "GATE{0}:THR {1}".format(chan.number, self.params.threshold)
             self.board.transport.client.write(query)
-            self.ini_sets.setValue("threshold", threshold)
-            print("Threshold: {0}".format(threshold))
+            self.ini_sets.setValue("threshold", self.params.threshold)
+            print("Threshold: {0}".format(self.params.threshold))
 
-            query = "GATE{0}:PRETRIG {1}".format(chan.number, pretrigger)
+            query = "GATE{0}:PRETRIG {1}".format(chan.number, self.params.pretrigger)
             self.board.transport.client.write(query)
-            self.ini_sets.setValue("pretrigger", pretrigger)
-            print("Pretrigger: {0}".format(pretrigger))
+            self.ini_sets.setValue("pretrigger", self.params.pretrigger)
+            print("Pretrigger: {0}".format(self.params.pretrigger))
 
-            # query = "ACQ{0}:MOVAVER:BYPASS?".format(chan.number)   
-            # self.board.transport.client.write(query)
-            # print("BYPASS: {0}".format(self.board.transport.client.read_raw()))
-
-            # query = "ACQ{0}:MOVAVER:WIN?".format(chan.number)   
-            # self.board.transport.client.write(query)
-            # print("WIN: {0}".format(self.board.transport.client.read_raw()))
-
-            query = "GATE{0} {1},{2}".format(chan.number, gate_begin, gate_end)
+            query = "GATE{0} {1},{2}".format(chan.number, self.params.gate_begin,\
+                                             self.params.gate_end)
             self.board.transport.client.write(query)
-            self.ini_sets.setValue("gate_begin", gate_begin)
-            self.ini_sets.setValue("gate_end", gate_end)
-            print("Gate start: {0}".format(gate_begin))
-            print("Gate end: {0}".format(gate_end))
+            self.ini_sets.setValue("gate_begin", self.params.gate_begin)
+            self.ini_sets.setValue("gate_end", self.params.gate_end)
+            print("Gate start: {0}".format(self.params.gate_begin))
+            print("Gate end: {0}".format(self.params.gate_end))
 
-            query = "ACQ{0}:MOVAVER:BYPASS {1}".format(chan.number, movaver_bypass)   
+            query = "ACQ{0}:MOVAVER:BYPASS {1}".format(chan.number, self.params.movaver_bypass)   
             self.board.transport.client.write(query)
-            query = "ACQ{0}:MOVAVER:WIN {1}".format(chan.number, movaver_win)   
+            query = "ACQ{0}:MOVAVER:WIN {1}".format(chan.number, self.params.movaver_win)   
             self.board.transport.client.write(query)
-            self.ini_sets.setValue("movaver_bypass", movaver_bypass)
-            self.ini_sets.setValue("movaver_win", movaver_win)
-            print("Moving avg: {0}".format(movaver_win))
+            self.ini_sets.setValue("movaver_bypass", self.params.movaver_bypass)
+            self.ini_sets.setValue("movaver_win", self.params.movaver_win)
+            print("Moving avg: {0}".format(self.params.movaver_win))
 
-            query = "GATE{0}:BASELINE {1}".format(chan.number,bline)  
+            query = "GATE{0}:BASELINE {1}".format(chan.number,self.params.bline)  
             self.board.transport.client.write(query) 
-            self.ini_sets.setValue("bline", bline)          
-            print("Baseline: {0}".format(bline))
+            self.ini_sets.setValue("bline", self.params.bline)          
+            print("Baseline: {0}".format(self.params.bline))
 
-            query = "GATE{0}:HYST {1}".format(chan.number, hystChecked)
+            query = "GATE{0}:HYST {1}".format(chan.number, self.params.hystChecked)
             self.board.transport.client.write(query)   
-            self.ini_sets.setValue("hystChecked", hystChecked)              
-            print("Check state:{0}".format(hystChecked))  
+            self.ini_sets.setValue("hystChecked", self.params.hystChecked)              
+            print("Check state:{0}".format(self.params.hystChecked))  
             self.ini_sets.endGroup()
         self.ini_sets.endGroup()
 
