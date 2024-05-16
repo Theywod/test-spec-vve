@@ -8,6 +8,7 @@
 
 import sys
 import os
+import pyqtgraph as pg
 
 
 from PyQt5.QtWidgets import (
@@ -38,8 +39,7 @@ from devices.devices import DeviceConn_MasterSlave, DevicesMap, Device, Channel,
 
 import numpy as np
 
-from pyqt_instruments import ui_data_saver
-
+from analitics.analitics import Analitics
 
 class MainWindow(QMainWindow):
     signal_dump_wave     = pyqtSignal(object, object, object)
@@ -82,7 +82,7 @@ class MainWindow(QMainWindow):
             #create connections for spectrometer widgets
         self.m_specWidget.btn_clear.clicked.connect(self.clear_spec)
         self.m_sumSpectrometer.btn_clear.clicked.connect(self.clear_spec)
-
+        
     def clear_spec(self):   #clear spectrum physically, for each channel
         for device in self.devicesMap.values():
             for chan in device.channels:
