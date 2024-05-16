@@ -15,16 +15,34 @@ from PyQt5.QtWidgets import (
     QPushButton, QWidget, QVBoxLayout, QGroupBox,
     QLineEdit, QGridLayout, QTableWidget,
     QListWidget, QTableWidgetItem, QComboBox,
-    QHBoxLayout, QTabWidget, QToolBar, QCheckBox, QSpacerItem
+    QHBoxLayout, QTabWidget, QToolBar, QCheckBox, QSpacerItem, QDoubleSpinBox
 )
 from PyQt5.QtCore import (
     pyqtSignal, QThread, 
     QThreadPool, QSettings, 
-    QEvent, Qt, pyqtSlot
+    QEvent, Qt, pyqtSlot, QSettings
 )
 from PyQt5.QtGui import (
     QPixmap, QFont, QIcon
 )
+
+def conv_v_to_adc(val):
+    adc_v_pp = 2
+    adc_bitwidth = 2**14
+
+    #self.adc_step = 1/8192*1000
+
+    res = val * adc_bitwidth / adc_v_pp
+
+    return int(res)
+
+def conv_adc_to_v(val):
+    adc_v_pp = 2
+    adc_bitwidth = 2**14        
+    res = adc_v_pp * val / adc_bitwidth
+
+    return res
+
 
 #Roles: master/slave
 class RolesList(QComboBox):
@@ -36,17 +54,116 @@ class RolesList(QComboBox):
 class ChannelWindow(QWidget):
     def __init__(self):
         super().__init__()
+        self.setupUI()
+        #calculates value of threshold in adc ticks
+        self.lne_threshold.valueChanged.connect(lambda: self.lbl_threshold_ticks.setText(str(conv_v_to_adc(self.lne_threshold.value()))))
+        self.lne_bline.valueChanged.connect(lambda: self.lbl_bline_ticks.setText(str(conv_v_to_adc(self.lne_bline.value()))))
+
+        self.lne_bias.valueChanged.connect(lambda: self.lbl_bias.setText(str(self.lne_bias.value())))
+        self.lne_ampl.valueChanged.connect(lambda: self.lbl_ampl.setText(str(self.lne_ampl.value())))
+
+        self.setInitValues()
+
+
+    def setupUI(self):
         self.channel_id = QLabel("")
         self.isChannelActive = QCheckBox("Channel is active")
         self.isChannelActive.setChecked(False)
+        self.chan_number = QLabel("")
+
+        self.grid_chProps = QGridLayout()
+
+        #threshold settings
+        self.lbl_threshold_capt = QLabel("Threshold value")
+        self.lne_threshold = QDoubleSpinBox()
+        self.lne_threshold.setSingleStep(1e-3)
+        self.lne_threshold.setDecimals(3)
+        self.lbl_threshold_ticks = QLabel("0")
+        self.chk_hyst = QCheckBox("Enable hystheresis")
+        self.lbl_pretrig = QLabel("Pretrigger, bins")
+        self.lne_pretrig = QSpinBox()
+        self.lne_pretrig.setRange(0,255)
+        #gate settings
+        self.lbl_gate_start = QLabel("Gate start, bins")
+        self.lne_gate_start = QSpinBox()
+        self.lne_gate_start.setRange(0,255)
+        self.lbl_gate_end = QLabel("Gate end, bins")
+        self.lne_gate_end = QSpinBox()
+        self.lne_gate_end.setRange(0,255)
+        self.lbl_movavg = QLabel("Moving average, bins")
+        self.lne_gate_movavg = QSpinBox()
+        self.lne_gate_movavg.setRange(0,255)
+        #baseline settings
+        self.lbl_bline = QLabel("Baseline value")
+        self.lne_bline = QDoubleSpinBox()
+        self.lne_bline.setSingleStep(1e-3)
+        self.lne_bline.setDecimals(3)
+        self.lbl_bline_ticks = QLabel("0")
+        #if shield is connected, set bias voltage and amplification
+            #bias
+        self.lbl_bias_capt = QLabel("Bias voltage, ticks")
+        self.lne_bias = QSpinBox()
+        self.lne_bias.setRange(0,255)
+        self.lbl_bias = QLabel("0")
+            #amplification
+        self.lbl_ampl_capt = QLabel("Amplification, ticks")
+        self.lne_ampl = QSpinBox()
+        self.lne_ampl.setRange(0,255)
+        self.lbl_ampl = QLabel("0")
+        #positioning in layout
+        self.grid_chProps.addWidget(self.channel_id, 0, 0, 1, 1)
+        self.grid_chProps.addWidget(self.isChannelActive, 0, 1, 1, 1)
+        self.grid_chProps.addWidget(self.chan_number, 0, 2, 1, 1)
+
+
+        self.grid_chProps.addWidget(self.lbl_threshold_capt, 1, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_threshold, 1, 1, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_threshold_ticks, 1, 2, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_pretrig, 2, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_pretrig, 2, 1, 1, 1)
+        self.grid_chProps.addWidget(self.chk_hyst, 2, 2, 1, 1)
+
+        self.grid_chProps.addWidget(self.lbl_gate_start, 3, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_gate_start, 3, 1, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_gate_end, 4, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_gate_end, 4, 1, 1, 1)
+
+        self.grid_chProps.addWidget(self.lbl_movavg, 5, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_gate_movavg, 5, 1, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_bline, 6, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_bline, 6, 1, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_bline_ticks, 6, 2, 1, 1)
+
+        self.grid_chProps.addWidget(self.lbl_bias_capt, 7, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_bias, 7, 1, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_bias, 7, 2, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_ampl_capt, 8, 0, 1, 1)
+        self.grid_chProps.addWidget(self.lne_ampl, 8, 1, 1, 1)
+        self.grid_chProps.addWidget(self.lbl_ampl, 8, 2, 1, 1)
+
+
         layout = QVBoxLayout(self)
-        layout.addWidget(self.channel_id)
-        layout.addWidget(self.isChannelActive)
+        layout.addLayout(self.grid_chProps)
         layout.addStretch()
 
         self.setLayout(layout)
+
     def updUI(self, channel):
         self.isChannelActive.setChecked(channel.isActive)
+
+    def setInitValues(self):
+        self.lne_threshold.setValue(conv_adc_to_v(250))
+        self.lne_threshold.valueChanged.emit(self.lne_threshold.value())
+        self.lne_bline.setValue(conv_adc_to_v(0))
+        self.lne_bline.valueChanged.emit(self.lne_bline.value())
+        self.lne_gate_start.setValue(0)
+        self.lne_gate_end.setValue(128)
+        self.lne_pretrig.setValue(0)
+        self.lne_gate_movavg.setValue(3)
+        self.lne_bias.setValue(100)
+        self.lne_bias.valueChanged.emit(self.lne_bias.value())
+        self.lne_ampl.setValue(100)
+        self.lne_ampl.valueChanged.emit(self.lne_ampl.value())
 
 
 class BoardWindow(QWidget):
@@ -54,10 +171,18 @@ class BoardWindow(QWidget):
         super().__init__()
         self.board_ip = QLabel("")
         self.channels_tab = QTabWidget()
+        self.btn_sendData = QPushButton("Send data to board")
+        self.btn_loadData = QPushButton("Load from INI")
+
 
         layout = QVBoxLayout(self)
         #layout.addWidget(self.board_ip)
         layout.addWidget(self.channels_tab)
+
+        hlayout = QHBoxLayout()
+        hlayout.addWidget(self.btn_sendData)
+        hlayout.addWidget(self.btn_loadData)
+        layout.addLayout(hlayout)
 
         self.setLayout(layout)
         self.setEnabled(True)
@@ -66,7 +191,7 @@ class BoardWindow(QWidget):
 class BoardsManager(QTabWidget):
     def __init__(self):
         super().__init__()
-        self.setMinimumHeight(250)
+        self.setMinimumHeight(350)
         self.setFixedWidth(450)
         self.setEnabled(True)
 
@@ -87,10 +212,50 @@ class Channel:
         print("Current status: {0}".format(self.isActive))
     def updUI(self):
         self.channelTab.isChannelActive.setChecked(self.isActive)
+        self.channelTab.chan_number.setText("On board chan. No. {0}".format(self.number))
     def connectActive(self):
         isChecked = self.channelTab.isChannelActive.isChecked
         self.channelTab.isChannelActive.stateChanged.connect(lambda: self.changeStatus(isChecked()))
 
+class ChanParams:
+    def __init__(self):
+            self.threshold = "0"
+            self.pretrigger = "0"
+            self.gate_begin = "0"
+            self.gate_end = "0"
+            self.movaver_bypass = 0
+            self.movaver_win = "0"
+            self.bline = "0"
+            self.hystChecked = 0
+
+    def getValuesLines(self, chan):
+        self.threshold = chan.channelTab.lbl_threshold_ticks.text()
+        self.pretrigger = chan.channelTab.lne_pretrig.text()
+        self.gate_begin = chan.channelTab.lne_gate_start.text()
+        self.gate_end = chan.channelTab.lne_gate_end.text()
+        self.movaver_bypass = 0
+        self.movaver_win = chan.channelTab.lne_gate_movavg.text()
+        self.bline = chan.channelTab.lbl_bline_ticks.text()
+        self.hystChecked = int(chan.channelTab.chk_hyst.checkState()/2)
+
+    def getValuesIni(self, ini_sets, ip, chan):
+        ini_sets.beginGroup(ip)
+        ini_sets.beginGroup(str(chan))
+        print(ini_sets.allKeys())
+
+        print("{0} - {1}".format(chan, ini_sets.value("threshold")))
+        self.threshold = ini_sets.value("threshold")
+        self.pretrigger = ini_sets.value("pretrigger")
+        self.gate_begin = ini_sets.value("gate_begin")
+        self.gate_end = ini_sets.value("gate_end")
+        self.movaver_bypass = 0
+        self.movaver_win = ini_sets.value("movaver_win")
+        self.bline = ini_sets.value("bline")
+        self.hystChecked = int(ini_sets.value("hystChecked"))
+        ini_sets.endGroup()
+        ini_sets.endGroup()
+        
+        
 
 #Device describes specific board with its IP address, current role, connection status,
 #uptime, connection port, its instance in memory after connection, number of channels
@@ -106,6 +271,8 @@ class Device:
         self.nChannels = 0
         self.channels = []
         self.deviceTab = None
+        self.ini_sets = QSettings("devices.ini", QSettings.IniFormat)
+        self.params = ChanParams()
 
     def setIP(self, ip):
         self.ip = ip
@@ -115,8 +282,90 @@ class Device:
         self.status = status
     def setUptime(self, uptime):
         self.uptime = uptime
+    
+    #when our device is recognized by system and its tab widget is created, make connections to deal with data from widget
     def updTab(self, value):
         self.deviceTab = value
+        self.deviceTab.btn_sendData.clicked.connect(self.sendData)
+        self.deviceTab.btn_loadData.clicked.connect(self.getData)
+
+    def getData(self):
+        self.settings = {'ip':'127.0.0.1', 'port':5000}
+        self.settings['ip'] = self.ip
+        self.board.connect(self.settings)
+        self.board.transport.client.write('*IDN?')
+        print("Connected with device {0}: {1}".format(self.ip, \
+                self.board.transport.client.read_raw().decode('utf-8').rstrip()))
+
+        for chan in self.channels:
+            self.params.getValuesIni(self.ini_sets, self.ip, str(chan.number))
+            chan.channelTab.lne_threshold.setValue(conv_adc_to_v(int(self.params.threshold)))
+            chan.channelTab.lne_pretrig.setValue(int(self.params.pretrigger))
+            chan.channelTab.lne_gate_start.setValue(int(self.params.gate_begin))
+            chan.channelTab.lne_gate_end.setValue(int(self.params.gate_end))
+            self.params.movaver_bypass = 0
+            chan.channelTab.lne_gate_movavg.setValue(int(self.params.movaver_win))
+            chan.channelTab.lne_bline.setValue(conv_adc_to_v(int(self.params.bline)))
+            hystChecked = False
+            if self.params.hystChecked == 1:
+                hystChecked = True
+            else:
+                hystChecked = False 
+            chan.channelTab.chk_hyst.setChecked(hystChecked)
+
+
+    def sendData(self):
+        self.settings = {'ip':'127.0.0.1', 'port':5000}
+        self.settings['ip'] = self.ip
+        self.board.connect(self.settings)
+        self.board.transport.client.write('*IDN?')
+        print("Connected with device {0}: {1}".format(self.ip, \
+                self.board.transport.client.read_raw().decode('utf-8').rstrip()))
+        self.ini_sets.beginGroup(self.ip)
+
+        for chan in self.channels:
+            self.ini_sets.beginGroup(str(chan.number))
+            self.params.getValuesLines(chan)
+
+            query = "GATE{0}:THR {1}".format(chan.number, self.params.threshold)
+            self.board.transport.client.write(query)
+            self.ini_sets.setValue("threshold", self.params.threshold)
+            print("Threshold: {0}".format(self.params.threshold))
+
+            query = "GATE{0}:PRETRIG {1}".format(chan.number, self.params.pretrigger)
+            self.board.transport.client.write(query)
+            self.ini_sets.setValue("pretrigger", self.params.pretrigger)
+            print("Pretrigger: {0}".format(self.params.pretrigger))
+
+            query = "GATE{0} {1},{2}".format(chan.number, self.params.gate_begin,\
+                                             self.params.gate_end)
+            self.board.transport.client.write(query)
+            self.ini_sets.setValue("gate_begin", self.params.gate_begin)
+            self.ini_sets.setValue("gate_end", self.params.gate_end)
+            print("Gate start: {0}".format(self.params.gate_begin))
+            print("Gate end: {0}".format(self.params.gate_end))
+
+            query = "ACQ{0}:MOVAVER:BYPASS {1}".format(chan.number, self.params.movaver_bypass)   
+            self.board.transport.client.write(query)
+            query = "ACQ{0}:MOVAVER:WIN {1}".format(chan.number, self.params.movaver_win)   
+            self.board.transport.client.write(query)
+            self.ini_sets.setValue("movaver_bypass", self.params.movaver_bypass)
+            self.ini_sets.setValue("movaver_win", self.params.movaver_win)
+            print("Moving avg: {0}".format(self.params.movaver_win))
+
+            query = "GATE{0}:BASELINE {1}".format(chan.number,self.params.bline)  
+            self.board.transport.client.write(query) 
+            self.ini_sets.setValue("bline", self.params.bline)          
+            print("Baseline: {0}".format(self.params.bline))
+
+            query = "GATE{0}:HYST {1}".format(chan.number, self.params.hystChecked)
+            self.board.transport.client.write(query)   
+            self.ini_sets.setValue("hystChecked", self.params.hystChecked)              
+            print("Check state:{0}".format(self.params.hystChecked))  
+            self.ini_sets.endGroup()
+        self.ini_sets.endGroup()
+
+
 
 #Basic widget for connection to single device
 #contains line for device IP, connection and deletion buttons
