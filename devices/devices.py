@@ -50,7 +50,7 @@ class RolesList(QComboBox):
         super().__init__()
         self.addItems(["Master", "Slave"])
 
-
+#widget for channel tab with properties for each channel, connects to BoardWindow
 class ChannelWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -64,7 +64,6 @@ class ChannelWindow(QWidget):
 
         self.setInitValues()
 
-
     def setupUI(self):
         self.channel_id = QLabel("")
         self.isChannelActive = QCheckBox("Channel is active")
@@ -73,7 +72,7 @@ class ChannelWindow(QWidget):
 
         self.grid_chProps = QGridLayout()
 
-        #threshold settings
+            #threshold settings
         self.lbl_threshold_capt = QLabel("Threshold value")
         self.lne_threshold = QDoubleSpinBox()
         self.lne_threshold.setSingleStep(1e-3)
@@ -83,7 +82,7 @@ class ChannelWindow(QWidget):
         self.lbl_pretrig = QLabel("Pretrigger, bins")
         self.lne_pretrig = QSpinBox()
         self.lne_pretrig.setRange(0,255)
-        #gate settings
+            #gate settings
         self.lbl_gate_start = QLabel("Gate start, bins")
         self.lne_gate_start = QSpinBox()
         self.lne_gate_start.setRange(0,255)
@@ -93,7 +92,7 @@ class ChannelWindow(QWidget):
         self.lbl_movavg = QLabel("Moving average, bins")
         self.lne_gate_movavg = QSpinBox()
         self.lne_gate_movavg.setRange(0,255)
-        #baseline settings
+            #baseline settings
         self.lbl_bline = QLabel("Baseline value")
         self.lne_bline = QDoubleSpinBox()
         self.lne_bline.setSingleStep(1e-3)
@@ -141,7 +140,6 @@ class ChannelWindow(QWidget):
         self.grid_chProps.addWidget(self.lne_ampl, 8, 1, 1, 1)
         self.grid_chProps.addWidget(self.lbl_ampl, 8, 2, 1, 1)
 
-
         layout = QVBoxLayout(self)
         layout.addLayout(self.grid_chProps)
         layout.addStretch()
@@ -149,9 +147,9 @@ class ChannelWindow(QWidget):
         self.setLayout(layout)
 
     def updUI(self, channel):
-        self.isChannelActive.setChecked(channel.isActive)
+        self.isChannelActive.setChecked(channel.isActive)   #setup value from channel properties
 
-    def setInitValues(self):
+    def setInitValues(self):                                #initial (default) parameters for board channels
         self.lne_threshold.setValue(conv_adc_to_v(250))
         self.lne_threshold.valueChanged.emit(self.lne_threshold.value())
         self.lne_bline.setValue(conv_adc_to_v(0))
@@ -166,14 +164,13 @@ class ChannelWindow(QWidget):
         self.lne_ampl.valueChanged.emit(self.lne_ampl.value())
 
 
-class BoardWindow(QWidget):
+class BoardWindow(QWidget):     #widget for board properties and channels, is emplaced in BoardManager
     def __init__(self):
         super().__init__()
         self.board_ip = QLabel("")
         self.channels_tab = QTabWidget()
         self.btn_sendData = QPushButton("Send data to board")
-        self.btn_loadData = QPushButton("Load from INI")
-
+        self.btn_loadData = QPushButton("Load from prevoius run")
 
         layout = QVBoxLayout(self)
         #layout.addWidget(self.board_ip)
@@ -217,7 +214,7 @@ class Channel:
         isChecked = self.channelTab.isChannelActive.isChecked
         self.channelTab.isChannelActive.stateChanged.connect(lambda: self.changeStatus(isChecked()))
 
-class ChanParams:
+class ChanParams:               #parameters of board channel that can be transported via scpi
     def __init__(self):
             self.threshold = "0"
             self.pretrigger = "0"
@@ -228,7 +225,7 @@ class ChanParams:
             self.bline = "0"
             self.hystChecked = 0
 
-    def getValuesLines(self, chan):
+    def getValuesLines(self, chan): #get values from channel tab widgets, spinboxes/lines
         self.threshold = chan.channelTab.lbl_threshold_ticks.text()
         self.pretrigger = chan.channelTab.lne_pretrig.text()
         self.gate_begin = chan.channelTab.lne_gate_start.text()
@@ -238,12 +235,9 @@ class ChanParams:
         self.bline = chan.channelTab.lbl_bline_ticks.text()
         self.hystChecked = int(chan.channelTab.chk_hyst.checkState()/2)
 
-    def getValuesIni(self, ini_sets, ip, chan):
+    def getValuesIni(self, ini_sets, ip, chan): #get values from ini file
         ini_sets.beginGroup(ip)
         ini_sets.beginGroup(str(chan))
-        print(ini_sets.allKeys())
-
-        print("{0} - {1}".format(chan, ini_sets.value("threshold")))
         self.threshold = ini_sets.value("threshold")
         self.pretrigger = ini_sets.value("pretrigger")
         self.gate_begin = ini_sets.value("gate_begin")
@@ -254,8 +248,6 @@ class ChanParams:
         self.hystChecked = int(ini_sets.value("hystChecked"))
         ini_sets.endGroup()
         ini_sets.endGroup()
-        
-        
 
 #Device describes specific board with its IP address, current role, connection status,
 #uptime, connection port, its instance in memory after connection, number of channels
@@ -289,14 +281,13 @@ class Device:
         self.deviceTab.btn_sendData.clicked.connect(self.sendData)
         self.deviceTab.btn_loadData.clicked.connect(self.getData)
 
-    def getData(self):
+    def getData(self):  #update channels parameters from ini file and set them to channel tab widget
         self.settings = {'ip':'127.0.0.1', 'port':5000}
         self.settings['ip'] = self.ip
         self.board.connect(self.settings)
         self.board.transport.client.write('*IDN?')
         print("Connected with device {0}: {1}".format(self.ip, \
                 self.board.transport.client.read_raw().decode('utf-8').rstrip()))
-
         for chan in self.channels:
             self.params.getValuesIni(self.ini_sets, self.ip, str(chan.number))
             chan.channelTab.lne_threshold.setValue(conv_adc_to_v(int(self.params.threshold)))
@@ -314,7 +305,7 @@ class Device:
             chan.channelTab.chk_hyst.setChecked(hystChecked)
 
 
-    def sendData(self):
+    def sendData(self):     #get data from channel widget and send it to board via scpi
         self.settings = {'ip':'127.0.0.1', 'port':5000}
         self.settings['ip'] = self.ip
         self.board.connect(self.settings)
