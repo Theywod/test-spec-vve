@@ -23,6 +23,44 @@ from PyQt5.QtGui import QFont
 
 import pyqtgraph as pg
 
+from pybaselines import Baseline, utils
+from scipy.optimize import curve_fit
+import numpy as np
+
+def gauss(x: np.ndarray, a: float, mu: float, sigma: float, b: float) -> np.ndarray:
+    return (a/sigma/np.sqrt(2*np.pi))*np.exp(-0.5 * ((x-mu)/sigma)**2) + b
+
+class PeakIntegrator(QObject):
+    def __init__(self):
+        self.gateBegin = 0
+        self.gateEnd = 200
+
+        self.lam = 9e5
+        self.tol = 1e-6
+        self.max_iter = 20
+        self.dataX = [0] * 1024
+
+    def setParams(self, gateBegin, gateEnd):
+        self.gateBegin = gateBegin
+        self.gateEnd = gateEnd
+        self.dataX = np.arange(self.gateBegin, self.gateEnd, 1)
+
+    def processData(self, data):
+        baseline_fitter = Baseline(x_data=self.dataX)
+        dataChunk = data[self.gateBegin:self.gateEnd]
+        self.bline, params_1 = baseline_fitter.aspls(dataChunk, lam=self.lam,\
+                                        tol=self.tol, max_iter=self.max_iter)
+        dataCorrected = dataChunk - self.bline
+        popt, pcov = curve_fit(gauss, self.dataX, dataCorrected, p0 = [2e4,180.0, 20.0, 0.0],\
+                       bounds=((-np.inf, -100, -np.inf, -1e-9), (np.inf, np.inf, np.inf, 0)))
+        self.fitData = gauss(self.dataX,*popt)
+        self.integral = np.sum(self.fitData)
+
+
+
+
+
+
 class Spectrometer(QWidget):
     name = 'Spectrometer'
     signal_dataReady = pyqtSignal(object, object)
@@ -36,7 +74,13 @@ class Spectrometer(QWidget):
         self.devicesMap = None
         self.useSum = True
 
+        self.framesy = []
+
         self.btn_clear.clicked.connect(self.m_sp_plotter.clear)
+        self.btn_clear.clicked.connect(self.trends.pl_trends.clear)
+        self.btn_clear.clicked.connect(self.clear_data)
+
+
         self.btn_replot_act.clicked.connect(self.replot)
         self.chk_enableTrends.stateChanged.connect(self.enableTrends)
 
@@ -113,12 +157,36 @@ class Spectrometer(QWidget):
         counts = np.array(dataSum)          
         if self.useSum:
             self.m_sp_plotter.plot(bins,counts, pen = self.m_sp_plotter.pen, name = "Summary spectrum")
+
+            self.integrator = PeakIntegrator()
+            gateBegin = int(self.trends.tabwid.tab_PeakArea.spin_peak_area_begin.value())
+            gateEnd = int(self.trends.tabwid.tab_PeakArea.spin_peak_area_end.value())
+            #print("{0} - {1}".format(gateBegin, gateEnd))
+
+            self.integrator.setParams(gateBegin, gateEnd)
+            #print(self.integrator.dataX)
+            self.integrator.processData(counts)
+            print(self.integrator.integral)
+
+            framesX = np.arange(0, entry, 1)
+            self.framesy.append(self.integrator.integral)
+            self.trends.pl_trends.plot(framesX, self.framesy, pen=self.trends.pl_trends.pen)
+
+            self.m_sp_plotter.plot(self.integrator.dataX, self.integrator.bline, pen=pg.mkPen(\
+                color = "#0F0", width=2))
+            self.m_sp_plotter.plot(self.integrator.dataX, (self.integrator.bline+self.integrator.fitData), pen=pg.mkPen(\
+                            color = "#0FF", width=2))
+        
+
         self.m_sp_plotter.addItem(self.m_sp_plotter.region_peak, ignoreBounds=True)
         
         self.lbl_entries.setText("{0} frames".format(entry))
 
         self.btn_replot_act.setEnabled(True)
         print("Spectrum plotted")
+
+    def clear_data(self):
+        self.framesy.clear()
 
 class PlSpectrometer(PlotWidget):
     clr_cycle = ['#000', '#c77', '#0f0', '#00f','#054', '#d21', '#6c5', '#712', '#912', '#a3e', '#f21', '#840']
