@@ -177,6 +177,7 @@ class Spectrometer(QWidget):
             self.m_sp_plotter.plot(self.integrator.dataX, (self.integrator.bline+self.integrator.fitData), pen=pg.mkPen(\
                             color = "#0FF", width=2))
         
+
         self.m_sp_plotter.addItem(self.m_sp_plotter.region_peak, ignoreBounds=True)
         
         self.lbl_entries.setText("{0} frames".format(entry))
