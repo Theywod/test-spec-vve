@@ -51,7 +51,9 @@ class PeakIntegrator(QObject):
         self.bline, params_1 = baseline_fitter.aspls(dataChunk, lam=self.lam,\
                                         tol=self.tol, max_iter=self.max_iter)
         dataCorrected = dataChunk - self.bline
-        popt, pcov = curve_fit(gauss, self.dataX, dataCorrected, p0 = [2e4,180.0, 20.0, 0.0],\
+        dataCenter = (self.gateBegin + self.gateEnd) / 2
+        dataWidth = (self.gateBegin - self.gateEnd) / 2
+        popt, pcov = curve_fit(gauss, self.dataX, dataCorrected, p0 = [2e4,dataCenter, dataWidth, 0.0],\
                        bounds=((-np.inf, -100, -np.inf, -1e-9), (np.inf, np.inf, np.inf, 0)))
         self.fitData = gauss(self.dataX,*popt)
         self.integral = np.sum(self.fitData)
@@ -74,7 +76,8 @@ class Spectrometer(QWidget):
         self.devicesMap = None
         self.useSum = True
 
-        self.framesy = []
+        self.trendFramesY = []
+        self.trendFramesX = []
 
         self.btn_clear.clicked.connect(self.m_sp_plotter.clear)
         self.btn_clear.clicked.connect(self.trends.pl_trends.clear)
@@ -165,16 +168,22 @@ class Spectrometer(QWidget):
 
             self.integrator.setParams(gateBegin, gateEnd)
             #print(self.integrator.dataX)
+
             self.integrator.processData(counts)
             print(self.integrator.integral)
 
-            framesX = np.arange(0, entry, 1)
-            self.framesy.append(self.integrator.integral)
-            self.trends.pl_trends.plot(framesX, self.framesy, pen=self.trends.pl_trends.pen)
+            if (entry % 100 == 0):
+                self.trendFramesX.clear()
+                self.trendFramesY.clear()
+                self.trends.pl_trends.clear()
+
+            self.trendFramesX.append(entry)
+            self.trendFramesY.append(self.integrator.integral)
+            self.trends.pl_trends.plot(self.trendFramesX, self.trendFramesY, pen=self.trends.pl_trends.pen)
 
             self.m_sp_plotter.plot(self.integrator.dataX, self.integrator.bline, pen=pg.mkPen(\
                 color = "#0F0", width=2))
-            self.m_sp_plotter.plot(self.integrator.dataX, (self.integrator.bline+self.integrator.fitData), pen=pg.mkPen(\
+            self.m_sp_plotter.plot(self.integrator.dataX, (self.integrator.bline + self.integrator.fitData), pen=pg.mkPen(\
                             color = "#0FF", width=2))
         
         self.m_sp_plotter.addItem(self.m_sp_plotter.region_peak, ignoreBounds=True)
@@ -185,7 +194,9 @@ class Spectrometer(QWidget):
         print("Spectrum plotted")
 
     def clear_data(self):
-        self.framesy.clear()
+        self.trendFramesX.clear()
+        self.trendFramesY.clear()
+        self.trends.pl_trends.clear()
 
 class PlSpectrometer(PlotWidget):
     clr_cycle = ['#000', '#c77', '#0f0', '#00f','#054', '#d21', '#6c5', '#712', '#912', '#a3e', '#f21', '#840']
@@ -362,16 +373,17 @@ class PlTrend(PlotWidget):
 
         self.is_dumping = False
         self.waves_to_dump = 1
-        self.dataset = np.array([0] * 1024)
+        self.dataset = np.array([0] * 1)
         self.bins = np.array( range(0, len(self.dataset)))
         self.pen = pg.mkPen(color=(10, 0, 250))
         self.pltgraph = self.plot(self.bins, self.dataset, name="Test", pen = self.pen )
 
     def setupUI(self):
         self.setBackground('w')
-        self.enableAutoRange(axis='x')
         self.setXRange(0, 1, padding=0)
         self.setYRange(-20, 100, padding=0)
+        self.enableAutoRange(axis='x')
+        self.enableAutoRange(axis='y')
         self.setMouseEnabled(x=True, y=True)
         self.setLimits(xMin=0)
         self.setLabel('left', 'Counts') 
@@ -416,7 +428,12 @@ class SpectraDAQ(QObject):
             for device in self.devicesMap.values():
                 self.settings["ip"] = device.ip
                 device.board.connect(self.settings)
+                #if (device.nChannels < 4):
+                #    device.board.transport.client.write('SPEC:N1?') 
+                #else:
+                #    device.board.transport.client.write('SPEC?')             #query spectra
                 device.board.transport.client.write('SPEC?')             #query spectra
+
                 data.update({device.ip: device.board.transport.read_data()})  #get spectra from device
                 #for each channel data length is 1024 bytes + 3 bytes per channel + 6 ending bytes after the whole data array
                 #data is within ranges nChannel*1027 : nChannel*1027 + 1024

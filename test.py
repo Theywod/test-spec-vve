@@ -77,7 +77,9 @@ class MainWindow(QMainWindow):
 
         self.thr_daq.started.connect(self.worker.run)
         self.daqwidget.btn_get_single_spectrum.clicked.connect(self.get_single_spectrum)     
-        self.daqwidget.btn_get_full_spectrum.clicked.connect(self.get_series_of_spectra)     
+        self.daqwidget.btn_get_full_spectrum.clicked.connect(self.get_series_of_spectra)    
+        self.daqwidget.btn_get_full_spectrum.clicked.connect(self.m_sumSpectrometer.clear_data)     
+ 
         self.daqwidget.btn_interrupt.clicked.connect(self.setStop)     
             #create connections for spectrometer widgets
         self.m_specWidget.btn_clear.clicked.connect(self.clear_spec)

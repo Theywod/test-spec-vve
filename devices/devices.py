@@ -96,6 +96,7 @@ class ChannelWindow(QWidget):
         self.lbl_bline = QLabel("Baseline value")
         self.lne_bline = QDoubleSpinBox()
         self.lne_bline.setSingleStep(1e-3)
+        self.lne_bline.setRange(-1.0,1.0)
         self.lne_bline.setDecimals(3)
         self.lbl_bline_ticks = QLabel("0")
         #if shield is connected, set bias voltage and amplification
