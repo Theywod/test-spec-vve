@@ -35,9 +35,9 @@ class PeakIntegrator(QObject):
         self.gateBegin = 0
         self.gateEnd = 200
 
-        self.lam = 9e5
-        self.tol = 1e-6
-        self.max_iter = 20
+        self.lam = 5e7
+        self.tol = 1e-7
+        self.max_iter = 50
         self.dataX = [0] * 1024
 
     def setParams(self, gateBegin, gateEnd):
@@ -48,14 +48,18 @@ class PeakIntegrator(QObject):
     def processData(self, data):
         baseline_fitter = Baseline(x_data=self.dataX)
         dataChunk = data[self.gateBegin:self.gateEnd]
-        self.bline, params_1 = baseline_fitter.aspls(dataChunk, lam=self.lam,\
-                                        tol=self.tol, max_iter=self.max_iter)
+        self.bline, params = baseline_fitter.modpoly(dataChunk, poly_order=3, use_original=True)
+
+        # self.bline, params_1 = baseline_fitter.aspls(dataChunk, lam=self.lam,\
+        #                                 tol=self.tol, max_iter=self.max_iter)
         dataCorrected = dataChunk - self.bline
         dataCenter = (self.gateBegin + self.gateEnd) / 2
         dataWidth = (self.gateBegin - self.gateEnd) / 2
         popt, pcov = curve_fit(gauss, self.dataX, dataCorrected, p0 = [2e4,dataCenter, dataWidth, 0.0],\
                        bounds=((-np.inf, -100, -np.inf, -1e-9), (np.inf, np.inf, np.inf, 0)))
         self.fitData = gauss(self.dataX,*popt)
+        self.centroid = str(int(popt[1]))
+        print("Center: {0}".format(self.centroid))
         self.integral = np.sum(self.fitData)
 
 
@@ -172,7 +176,7 @@ class Spectrometer(QWidget):
             self.integrator.processData(counts)
             print(self.integrator.integral)
 
-            if (entry % 100 == 0):
+            if (entry % 100 == 1):
                 self.trendFramesX.clear()
                 self.trendFramesY.clear()
                 self.trends.pl_trends.clear()
@@ -183,6 +187,8 @@ class Spectrometer(QWidget):
 
             self.m_sp_plotter.plot(self.integrator.dataX, self.integrator.bline, pen=pg.mkPen(\
                 color = "#0F0", width=2))
+            self.m_sp_plotter.label0.setFormat(self.integrator.centroid)
+            #self.m_sp_plotter.label0.text = self.integrator.centroid
             self.m_sp_plotter.plot(self.integrator.dataX, (self.integrator.bline + self.integrator.fitData), pen=pg.mkPen(\
                             color = "#0FF", width=2))
         
@@ -206,7 +212,7 @@ class PlSpectrometer(PlotWidget):
         super().__init__()
 
         #ROI
-        self.region_peak = pg.LinearRegionItem(brush=(50,50,200,25), values=[150, 300], bounds=[0, 1000])
+        self.region_peak = pg.LinearRegionItem(brush=(50,50,200,25), values=[0, 1023], bounds=[0, 1023])
         self.label0 = pg.InfLineLabel(self.region_peak.lines[1], "None", position=0.95, rotateAxis=(0,0), anchor=(1, 1))
         font = QFont()
         font.setFamily("FreeMono")
@@ -343,15 +349,15 @@ class PeakArea(QWidget):
             #begin
         #self.spin_peak_area_begin = QtWidgets.QSpinBox(self.groupBox_PeakArea)
         self.spin_peak_area_begin = pg.SpinBox(self.groupBox_PeakArea)
-        self.spin_peak_area_begin.setRange(0,999)
-        self.spin_peak_area_begin.setProperty("value", 150)
+        self.spin_peak_area_begin.setRange(0,1023)
+        self.spin_peak_area_begin.setProperty("value", 0)
         self.spin_peak_area_begin.setOpts(step = 1)
         self.gridLayout_PeakArea.addWidget(self.spin_peak_area_begin, 0, 1, 1, 1)
             #end
         #self.spin_peak_area_end = QtWidgets.QSpinBox(self.groupBox_PeakArea)
         self.spin_peak_area_end = pg.SpinBox(self.groupBox_PeakArea)
-        self.spin_peak_area_end.setRange(0,999)
-        self.spin_peak_area_end.setProperty("value", 300)
+        self.spin_peak_area_end.setRange(0,1023)
+        self.spin_peak_area_end.setProperty("value", 1023)
         self.spin_peak_area_end.setOpts(step = 1)
         self.gridLayout_PeakArea.addWidget(self.spin_peak_area_end, 0, 2, 1, 1)
 
@@ -426,6 +432,7 @@ class SpectraDAQ(QObject):
         data = dict()
         self.settings = {'ip':'192.168.0.20', 'port':5000}
         for entry in range(nEntries):
+            nCountsPerSecondTotal = 0
             for device in self.devicesMap.values():
                 self.settings["ip"] = device.ip
                 device.board.connect(self.settings)
@@ -442,11 +449,15 @@ class SpectraDAQ(QObject):
                 nActiveChannels = int(((len(data[device.ip]) - 6)/1027))
                 for chan in range(0, nActiveChannels):
                     dataChunk = data[device.ip][chan*1027:(chan+1)*1027-3]
+                    chanIntegral = np.sum(dataChunk)    #calculate number of events per frame for each channel
+                    nCountsPerSecondTotal += chanIntegral
+                    print("Channel {0} integral: {1}".format(chan, chanIntegral))
                     if self.isContinuous:
                         device.channels[chan].data = np.add(device.channels[chan].data, dataChunk)
                         #self.m_sp_plotter.dataSets = self.m_sp_plotter.addPlot(device.channels[chan].name)
                     else:
                         device.channels[chan].data = dataChunk
+            print("Total CPF: {0}".format(nCountsPerSecondTotal))
             self.signal_dataReady.emit(self.devicesMap, (entry+1))
 
             if self.setStop:                          

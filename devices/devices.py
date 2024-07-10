@@ -225,6 +225,8 @@ class ChanParams:               #parameters of board channel that can be transpo
             self.movaver_win = "0"
             self.bline = "0"
             self.hystChecked = 0
+            self.bias = "255"
+            self.ampl = "255"
 
     def getValuesLines(self, chan): #get values from channel tab widgets, spinboxes/lines
         self.threshold = chan.channelTab.lbl_threshold_ticks.text()
@@ -235,6 +237,8 @@ class ChanParams:               #parameters of board channel that can be transpo
         self.movaver_win = chan.channelTab.lne_gate_movavg.text()
         self.bline = chan.channelTab.lbl_bline_ticks.text()
         self.hystChecked = int(chan.channelTab.chk_hyst.checkState()/2)
+        self.bias = chan.channelTab.lne_bias.text()
+        self.ampl = chan.channelTab.lne_ampl.text()
 
     def getValuesIni(self, ini_sets, ip, chan): #get values from ini file
         ini_sets.beginGroup(ip)
@@ -247,6 +251,8 @@ class ChanParams:               #parameters of board channel that can be transpo
         self.movaver_win = ini_sets.value("movaver_win")
         self.bline = ini_sets.value("bline")
         self.hystChecked = int(ini_sets.value("hystChecked"))
+        self.bias = ini_sets.value("bias")
+        self.ampl = ini_sets.value("ampl")
         ini_sets.endGroup()
         ini_sets.endGroup()
 
@@ -298,6 +304,9 @@ class Device:
             self.params.movaver_bypass = 0
             chan.channelTab.lne_gate_movavg.setValue(int(self.params.movaver_win))
             chan.channelTab.lne_bline.setValue(conv_adc_to_v(int(self.params.bline)))
+            chan.channelTab.lne_bias.setValue(int(self.params.bias))
+            chan.channelTab.lne_ampl.setValue(int(self.params.ampl))
+
             hystChecked = False
             if self.params.hystChecked == 1:
                 hystChecked = True
@@ -353,10 +362,24 @@ class Device:
             query = "GATE{0}:HYST {1}".format(chan.number, self.params.hystChecked)
             self.board.transport.client.write(query)   
             self.ini_sets.setValue("hystChecked", self.params.hystChecked)              
-            print("Check state:{0}".format(self.params.hystChecked))  
+            print("Check state:{0}".format(self.params.hystChecked)) 
+
+            query = "BIAS{0} {1}".format(chan.number, self.params.bias)
+            self.board.transport.client.write(query)   
+            self.ini_sets.setValue("bias", self.params.bias)              
+            print("Bias:{0}".format(self.params.bias)) 
+
+            query = "AMPL{0} {1}".format(chan.number, self.params.ampl)
+            self.board.transport.client.write(query)   
+            self.ini_sets.setValue("ampl", self.params.ampl)              
+            print("Amplification:{0}".format(self.params.ampl))              
             self.ini_sets.endGroup()
         self.ini_sets.endGroup()
 
+        query = "BIAS1?"
+        self.board.transport.client.write(query)  
+        response = self.board.transport.client.read_raw().decode('utf-8').rstrip()
+        print(response)
 
 
 #Basic widget for connection to single device
