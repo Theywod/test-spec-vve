@@ -46,12 +46,17 @@ class PeakIntegrator(QObject):
         self.dataX = np.arange(self.gateBegin, self.gateEnd, 1)
 
     def processData(self, data):
-        baseline_fitter = Baseline(x_data=self.dataX)
+        self.dataFull = np.arange(0, 1024, 1)
+        baseline_fitter = Baseline(x_data=self.dataFull)
         dataChunk = data[self.gateBegin:self.gateEnd]
-        self.bline, params = baseline_fitter.modpoly(dataChunk, poly_order=3, use_original=True)
+        #self.bline, params = baseline_fitter.modpoly(dataChunk, poly_order=3, use_original=True)
+        #
+        datadata = data[0:1023]
+        raw_bline, params = baseline_fitter.modpoly(data, poly_order=3, use_original=True)
 
         # self.bline, params_1 = baseline_fitter.aspls(dataChunk, lam=self.lam,\
         #                                 tol=self.tol, max_iter=self.max_iter)
+        self.bline = raw_bline[self.gateBegin:self.gateEnd]
         dataCorrected = dataChunk - self.bline
         dataCenter = (self.gateBegin + self.gateEnd) / 2
         dataWidth = (self.gateBegin - self.gateEnd) / 2
@@ -172,25 +177,34 @@ class Spectrometer(QWidget):
 
             self.integrator.setParams(gateBegin, gateEnd)
             #print(self.integrator.dataX)
+            try:
+                self.integrator.processData(counts)
+                print(self.integrator.integral)
+            except:
+                if (entry % 100 == 1):
+                    self.trendFramesX.clear()
+                    self.trendFramesY.clear()
+                    self.trends.pl_trends.clear()
 
-            self.integrator.processData(counts)
-            print(self.integrator.integral)
+                self.trendFramesX.append(entry)
+                self.trendFramesY.append(0)
+                self.trends.pl_trends.plot(self.trendFramesX, self.trendFramesY, pen=self.trends.pl_trends.pen)
+            else:
+                if (entry % 100 == 1):
+                    self.trendFramesX.clear()
+                    self.trendFramesY.clear()
+                    self.trends.pl_trends.clear()
 
-            if (entry % 100 == 1):
-                self.trendFramesX.clear()
-                self.trendFramesY.clear()
-                self.trends.pl_trends.clear()
+                self.trendFramesX.append(entry)
+                self.trendFramesY.append(self.integrator.integral)
+                self.trends.pl_trends.plot(self.trendFramesX, self.trendFramesY, pen=self.trends.pl_trends.pen)
 
-            self.trendFramesX.append(entry)
-            self.trendFramesY.append(self.integrator.integral)
-            self.trends.pl_trends.plot(self.trendFramesX, self.trendFramesY, pen=self.trends.pl_trends.pen)
-
-            self.m_sp_plotter.plot(self.integrator.dataX, self.integrator.bline, pen=pg.mkPen(\
-                color = "#0F0", width=2))
-            self.m_sp_plotter.label0.setFormat(self.integrator.centroid)
-            #self.m_sp_plotter.label0.text = self.integrator.centroid
-            self.m_sp_plotter.plot(self.integrator.dataX, (self.integrator.bline + self.integrator.fitData), pen=pg.mkPen(\
-                            color = "#0FF", width=2))
+                self.m_sp_plotter.plot(self.integrator.dataX, self.integrator.bline, pen=pg.mkPen(\
+                    color = "#0F0", width=2))
+                self.m_sp_plotter.label0.setFormat(self.integrator.centroid)
+                #self.m_sp_plotter.label0.text = self.integrator.centroid
+                self.m_sp_plotter.plot(self.integrator.dataX, (self.integrator.bline + self.integrator.fitData), pen=pg.mkPen(\
+                                color = "#0FF", width=2))
         
 
         self.m_sp_plotter.addItem(self.m_sp_plotter.region_peak, ignoreBounds=True)
@@ -451,7 +465,7 @@ class SpectraDAQ(QObject):
                     dataChunk = data[device.ip][chan*1027:(chan+1)*1027-3]
                     chanIntegral = np.sum(dataChunk)    #calculate number of events per frame for each channel
                     nCountsPerSecondTotal += chanIntegral
-                    print("Channel {0} integral: {1}".format(chan, chanIntegral))
+                    print("Channel {0} CPF: {1}".format(device.channels[chan].name, chanIntegral))
                     if self.isContinuous:
                         device.channels[chan].data = np.add(device.channels[chan].data, dataChunk)
                         #self.m_sp_plotter.dataSets = self.m_sp_plotter.addPlot(device.channels[chan].name)
