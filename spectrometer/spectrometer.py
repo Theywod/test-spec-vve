@@ -67,11 +67,6 @@ class PeakIntegrator(QObject):
         print("Center: {0}".format(self.centroid))
         self.integral = np.sum(self.fitData)
 
-
-
-
-
-
 class Spectrometer(QWidget):
     name = 'Spectrometer'
     signal_dataReady = pyqtSignal(object, object)
@@ -79,6 +74,8 @@ class Spectrometer(QWidget):
         super().__init__()
         self.m_sp_plotter = PlSpectrometer()
         self.trends = PeakTrends()
+
+        #self.frameTime = 1.0 #frame time = 1 s by default
         
         self.setupUI()
 
@@ -177,25 +174,19 @@ class Spectrometer(QWidget):
 
             self.integrator.setParams(gateBegin, gateEnd)
             #print(self.integrator.dataX)
+            if (entry % 100 == 1):
+                self.trendFramesX.clear()
+                self.trendFramesY.clear()
+                self.trends.pl_trends.clear()
+            self.trendFramesX.append(entry)
+
             try:
                 self.integrator.processData(counts)
                 print(self.integrator.integral)
             except:
-                if (entry % 100 == 1):
-                    self.trendFramesX.clear()
-                    self.trendFramesY.clear()
-                    self.trends.pl_trends.clear()
-
-                self.trendFramesX.append(entry)
                 self.trendFramesY.append(0)
                 self.trends.pl_trends.plot(self.trendFramesX, self.trendFramesY, pen=self.trends.pl_trends.pen)
             else:
-                if (entry % 100 == 1):
-                    self.trendFramesX.clear()
-                    self.trendFramesY.clear()
-                    self.trends.pl_trends.clear()
-
-                self.trendFramesX.append(entry)
                 self.trendFramesY.append(self.integrator.integral)
                 self.trends.pl_trends.plot(self.trendFramesX, self.trendFramesY, pen=self.trends.pl_trends.pen)
 
@@ -285,8 +276,8 @@ class TabWid(QTabWidget):
 
     def setupUI(self):
         self.setTabPosition(QTabWidget.North)
-        self.addTab(self.tab_TrendsParams, "Peak stabilization")
         self.addTab(self.tab_PeakArea, "Peak area")
+        self.addTab(self.tab_TrendsParams, "Spectrum info")
 
 class TrendsParams(QWidget):
     def __init__(self):
