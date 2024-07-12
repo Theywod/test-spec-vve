@@ -115,7 +115,7 @@ class OscilloscopeW(QtWidgets.QWidget, Ui_WaveformWidget):
         self.csv_writer_waves = None
         
     def prepare_to_save_waves(self):
-        if self.m_checkBox_saveToFile.isChecked:
+        if self.m_checkBox_saveToFile.isChecked():
             #self.logger.debug("Saving waves to file")
             data_dir = 'data'
             if (not os.path.isdir(data_dir)):

@@ -1,0 +1,1 @@
+set PYTHONOPTIMIZE=2 && pyinstaller.exe --clean test.spec
