@@ -49,9 +49,7 @@ class PeakIntegrator(QObject):
         self.dataFull = np.arange(0, 1024, 1)
         baseline_fitter = Baseline(x_data=self.dataFull)
         dataChunk = data[self.gateBegin:self.gateEnd]
-        #self.bline, params = baseline_fitter.modpoly(dataChunk, poly_order=3, use_original=True)
-        #
-        datadata = data[0:1023]
+
         raw_bline, params = baseline_fitter.modpoly(data, poly_order=3, use_original=True)
 
         # self.bline, params_1 = baseline_fitter.aspls(dataChunk, lam=self.lam,\
@@ -66,6 +64,7 @@ class PeakIntegrator(QObject):
         self.centroid = str(int(popt[1]))
         print("Center: {0}".format(self.centroid))
         self.integral = np.sum(self.fitData)
+        print("Integral: {0}".format(self.integral))
 
 class Spectrometer(QWidget):
     name = 'Spectrometer'
@@ -73,158 +72,25 @@ class Spectrometer(QWidget):
     def __init__(self):
         super().__init__()
         self.m_sp_plotter = PlSpectrometer()
-        self.trends = PeakTrends()
 
         #self.frameTime = 1.0 #frame time = 1 s by default
         
-        self.setupUI()
+        self.btn_clear = QPushButton("Clear plot")
+        self.btn_replot_act = QPushButton("Replot only active")
+        self.btn_replot_act.setEnabled(False)
+
+        self.lbl_entries = QLabel("0/0 entries")
 
         self.devicesMap = None
         self.useSum = True
 
-        self.trendFramesY = []
-        self.trendFramesX = []
-
         self.btn_clear.clicked.connect(self.m_sp_plotter.clear)
-        self.btn_clear.clicked.connect(self.trends.pl_trends.clear)
-        self.btn_clear.clicked.connect(self.clear_data)
-
-
-        self.btn_replot_act.clicked.connect(self.replot)
-        self.chk_enableTrends.stateChanged.connect(self.enableTrends)
-
-        #ROI changing
-        self.m_sp_plotter.region_peak.sigRegionChanged.connect(self.regionUpdated)
-        self.trends.tabwid.tab_PeakArea.spin_peak_area_begin.sigValueChanging.connect(self.spinUpdated)
-        self.trends.tabwid.tab_PeakArea.spin_peak_area_end.sigValueChanging.connect(self.spinUpdated)
-
-    def regionUpdated(self):
-        lo,hi = self.m_sp_plotter.region_peak.getRegion()
-        #print (lo,hi)
-        self.trends.tabwid.tab_PeakArea.spin_peak_area_begin.setValue(int(lo))
-        self.trends.tabwid.tab_PeakArea.spin_peak_area_end.setValue(int(hi))
-    
-    def spinUpdated(self):
-        rng = []
-        rng.append(self.trends.tabwid.tab_PeakArea.spin_peak_area_begin.value())
-        rng.append(self.trends.tabwid.tab_PeakArea.spin_peak_area_end.value())
-        #print(rng)
-        self.m_sp_plotter.region_peak.setRegion(rng)
-
-    def enableTrends(self):
-        if self.chk_enableTrends.isChecked():
-            self.trends.setHidden(False)
-        else:
-            self.trends.setHidden(True)
-
-    def setupUI(self):
-        self.btn_clear = QPushButton("Clear plot")
-        self.btn_replot_act = QPushButton("Replot only active")
-        self.btn_replot_act.setEnabled(False)
-        self.chk_enableTrends = QCheckBox("Enable trends analyzer")
-        self.trends.setHidden(True)
-
-        self.lbl_entries = QLabel("0/0 entries")
-
-        self.layout = QVBoxLayout()
-
-        self.layout_btns = QHBoxLayout()
-        self.layout_btns.addWidget(self.btn_clear)
-        self.layout_btns.addWidget(self.btn_replot_act)
-        self.layout_btns.addWidget(self.lbl_entries)
-        self.layout_btns.addWidget(self.chk_enableTrends)
-
-        self.layout.addLayout(self.layout_btns)
-        self.layout.addWidget(self.trends)
-        self.layout.addWidget(self.m_sp_plotter)
-        self.setLayout(self.layout)
-
-    def replot(self):
-        text = self.lbl_entries.text()
-        entries = re.findall(r'\d+', text)[0]
-        self.slot_on_spec_update(self.devicesMap, entries, self.useSum)
-
-    @pyqtSlot(object, object)
-    def slot_on_spec_update(self, devicesMap, entry, useSum):
-        self.devicesMap = devicesMap
-        self.useSum = useSum
-
-        dataSum = 0
-        plotIndex = 0
-        self.m_sp_plotter.clear()
-        for device in self.devicesMap.values():
-            for chan in device.channels:
-                if chan.isActive:
-                    print("Channel name: {0}".format(chan.name))
-                    dataSum += np.array(chan.data)
-                    if not useSum:
-                        self.m_sp_plotter.plot(self.m_sp_plotter.bins, np.array(chan.data), pen = pg.mkPen(\
-                            color = self.m_sp_plotter.clr_cycle[plotIndex], width=2), name=chan.name)
-                plotIndex += 1
-
-        bins = self.m_sp_plotter.bins
-        counts = np.array(dataSum)          
-        if self.useSum:
-            self.m_sp_plotter.plot(bins,counts, pen = self.m_sp_plotter.pen, name = "Summary spectrum")
-
-            self.integrator = PeakIntegrator()
-            gateBegin = int(self.trends.tabwid.tab_PeakArea.spin_peak_area_begin.value())
-            gateEnd = int(self.trends.tabwid.tab_PeakArea.spin_peak_area_end.value())
-            #print("{0} - {1}".format(gateBegin, gateEnd))
-
-            self.integrator.setParams(gateBegin, gateEnd)
-            #print(self.integrator.dataX)
-            if (entry % 100 == 1):
-                self.trendFramesX.clear()
-                self.trendFramesY.clear()
-                self.trends.pl_trends.clear()
-            self.trendFramesX.append(entry)
-
-            try:
-                self.integrator.processData(counts)
-                print(self.integrator.integral)
-            except:
-                self.trendFramesY.append(0)
-                self.trends.pl_trends.plot(self.trendFramesX, self.trendFramesY, pen=self.trends.pl_trends.pen)
-            else:
-                self.trendFramesY.append(self.integrator.integral)
-                self.trends.pl_trends.plot(self.trendFramesX, self.trendFramesY, pen=self.trends.pl_trends.pen)
-
-                self.m_sp_plotter.plot(self.integrator.dataX, self.integrator.bline, pen=pg.mkPen(\
-                    color = "#0F0", width=2))
-                self.m_sp_plotter.label0.setFormat(self.integrator.centroid)
-                #self.m_sp_plotter.label0.text = self.integrator.centroid
-                self.m_sp_plotter.plot(self.integrator.dataX, (self.integrator.bline + self.integrator.fitData), pen=pg.mkPen(\
-                                color = "#0FF", width=2))
-        
-
-        self.m_sp_plotter.addItem(self.m_sp_plotter.region_peak, ignoreBounds=True)
-        
-        self.lbl_entries.setText("{0} frames".format(entry))
-
-        self.btn_replot_act.setEnabled(True)
-        print("Spectrum plotted")
-
-    def clear_data(self):
-        self.trendFramesX.clear()
-        self.trendFramesY.clear()
-        self.trends.pl_trends.clear()
 
 class PlSpectrometer(PlotWidget):
     clr_cycle = ['#000', '#c77', '#0f0', '#00f','#054', '#d21', '#6c5', '#712', '#912', '#a3e', '#f21', '#840']
 
     def __init__(self):
         super().__init__()
-
-        #ROI
-        self.region_peak = pg.LinearRegionItem(brush=(50,50,200,25), values=[0, 1023], bounds=[0, 1023])
-        self.label0 = pg.InfLineLabel(self.region_peak.lines[1], "None", position=0.95, rotateAxis=(0,0), anchor=(1, 1))
-        font = QFont()
-        font.setFamily("FreeMono")
-        font.setPointSize(10)
-        font.setBold(True)
-        self.label0.setFont(font)
-        self.addItem(self.region_peak, ignoreBounds=True)
 
         self.setBackground('w')
         self.setXRange(0, 1024, padding=0)
@@ -246,6 +112,18 @@ class PlSpectrometer(PlotWidget):
         self.pen = pg.mkPen(color=(255, 0, 0))
         self.pltgraph = self.plot(self.bins, self.dataset, name="Test", pen = self.pen )
 
+    def addROI(self):
+        #ROI
+        self.region_peak = pg.LinearRegionItem(brush=(50,50,200,25), values=[0, 1023], bounds=[0, 1023])
+        self.label0 = pg.InfLineLabel(self.region_peak.lines[1], "None", position=0.95, rotateAxis=(0,0), anchor=(1, 1))
+        font = QFont()
+        font.setFamily("FreeMono")
+        font.setPointSize(10)
+        font.setBold(True)
+        self.label0.setFont(font)
+        self.addItem(self.region_peak, ignoreBounds=True)
+
+
 class PeakTrends(QWidget):
     def __init__(self):
         super().__init__()
@@ -256,10 +134,6 @@ class PeakTrends(QWidget):
 
     def setupUI(self):
         self.layout = QVBoxLayout()
-
-        # self.chk_enable = QCheckBox()
-        # self.chk_enable.setText("Enable analyzer")
-        #self.trParams.setEnabled(False)
 
         #self.layout.addWidget(self.chk_enable)
         self.layout.addWidget(self.tabwid)
@@ -411,9 +285,6 @@ class PlTrend(PlotWidget):
         self.setSizePolicy(sizePolicy)
         #self.setFixedHeight(150)
 
-
-
-
 class SpectraDAQ(QObject):
     finished = pyqtSignal()
     signal_dataReady = pyqtSignal(object, int)
@@ -441,10 +312,6 @@ class SpectraDAQ(QObject):
             for device in self.devicesMap.values():
                 self.settings["ip"] = device.ip
                 device.board.connect(self.settings)
-                #if (device.nChannels < 4):
-                #    device.board.transport.client.write('SPEC:N1?') 
-                #else:
-                #    device.board.transport.client.write('SPEC?')             #query spectra
                 device.board.transport.client.write('SPEC?')             #query spectra
 
                 data.update({device.ip: device.board.transport.read_data()})  #get spectra from device
@@ -459,7 +326,6 @@ class SpectraDAQ(QObject):
                     print("Channel {0} CPF: {1}".format(device.channels[chan].name, chanIntegral))
                     if self.isContinuous:
                         device.channels[chan].data = np.add(device.channels[chan].data, dataChunk)
-                        #self.m_sp_plotter.dataSets = self.m_sp_plotter.addPlot(device.channels[chan].name)
                     else:
                         device.channels[chan].data = dataChunk
             print("Total CPF: {0}".format(nCountsPerSecondTotal))
