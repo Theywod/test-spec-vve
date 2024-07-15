@@ -29,9 +29,9 @@ from PyQt5.QtGui import (
 sys.path.append("./transport/")
 
 import oscilloscope.oscilloscope as oscope
-import spectrometer.spectrometer as spmeter
+import spectrometer.spmeters as spmeters
 
-from spectrometer.spectrometer import SpectraDAQ
+from spectrometer.spmeter_base import SpectraDAQ
 from widgets.widgets import ConnectionWidget, DaqWidget
 
 from transport import api, api_param
@@ -120,8 +120,8 @@ class MainWindow(QMainWindow):
 
 
         self.oscope_widget = oscope.OscilloscopeW()
-        self.m_specWidget = spmeter.Spectrometer()
-        self.m_sumSpectrometer = spmeter.Spectrometer()
+        self.m_specWidget = spmeters.ChanSpectrometer()
+        self.m_sumSpectrometer = spmeters.SumSpectrometer()
         
         toolbar = QToolBar("Main toolbar")
         self.addToolBar(toolbar)
