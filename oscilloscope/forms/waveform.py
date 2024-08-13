@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\dkc1\Desktop\test-spec\test-spec\oscilloscope\forms/waveform.ui'
+# Form implementation generated from reading ui file '/home/biba/work/python/test-spec-vve/test-spec-vve/oscilloscope/forms/waveform.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.10
 #
@@ -70,10 +70,6 @@ class Ui_WaveformWidget(object):
         sizePolicy.setHeightForWidth(self.m_comboBox_channel_id.sizePolicy().hasHeightForWidth())
         self.m_comboBox_channel_id.setSizePolicy(sizePolicy)
         self.m_comboBox_channel_id.setObjectName("m_comboBox_channel_id")
-        self.m_comboBox_channel_id.addItem("")
-        self.m_comboBox_channel_id.addItem("")
-        self.m_comboBox_channel_id.addItem("")
-        self.m_comboBox_channel_id.addItem("")
         self.gridLayout_2.addWidget(self.m_comboBox_channel_id, 0, 2, 1, 1)
         self.m_spin_repeat_waves = QtWidgets.QSpinBox(self.widget)
         self.m_spin_repeat_waves.setEnabled(False)
@@ -102,10 +98,6 @@ class Ui_WaveformWidget(object):
         self.m_label_dumped.setText(_translate("WaveformWidget", "Dumped: 0 "))
         self.label_30.setText(_translate("WaveformWidget", "Samples num"))
         self.label_31.setText(_translate("WaveformWidget", "times"))
-        self.m_comboBox_channel_id.setItemText(0, _translate("WaveformWidget", "Channel 0"))
-        self.m_comboBox_channel_id.setItemText(1, _translate("WaveformWidget", "Channel 1"))
-        self.m_comboBox_channel_id.setItemText(2, _translate("WaveformWidget", "Channel 2"))
-        self.m_comboBox_channel_id.setItemText(3, _translate("WaveformWidget", "Channel 3"))
         self.m_push_clear.setText(_translate("WaveformWidget", "Clear plot"))
         self.m_checkBox_saveToFile.setText(_translate("WaveformWidget", "Save to file"))
 from pyqtgraph import PlotWidget

@@ -6,9 +6,9 @@
   Description   : Class for oscilloscope
 """
 
-if __debug__ is True:
-    import oscilloscope.oscilloscope_convert_ui as oscilloscope_convert_ui
-    oscilloscope_convert_ui.convert_package_ui()
+#if __debug__ is True:
+#    import oscilloscope.oscilloscope_convert_ui as oscilloscope_convert_ui
+#    oscilloscope_convert_ui.convert_package_ui()
 
 import os
 import time

@@ -184,6 +184,13 @@ class MainWindow(QMainWindow):
         for i in range(self.boards_mgr.count()):
             if  self.boards_mgr.tabText(i) == window.lne_ip_edit.text():
                 self.boards_mgr.removeTab(i)
+                #remove channel from comboBox of oscope
+                indx = self.oscope_widget.m_comboBox_channel_id.findText(str(window.lne_ip_edit.text()), Qt.MatchContains)
+                while indx != (-1):
+                    self.oscope_widget.m_comboBox_channel_id.removeItem(indx)
+                    indx = self.oscope_widget.m_comboBox_channel_id.findText(str(window.lne_ip_edit.text()), Qt.MatchContains)
+                    #self.oscope_widget.m_comboBox_channel_id.setCurrentIndex(1)
+                    #self.oscope_widget.m_comboBox_channel_id.setItemText(0,)
             else:
                 pass
         self.cwidget.tbl_devices_list.removeData(window.lne_ip_edit.text())
@@ -201,6 +208,9 @@ class MainWindow(QMainWindow):
 
                 channel.number = numCh
                 channel.change_name("Ch{0}".format(channel.number))
+
+                #add list of channel to comboBox of oscope
+                self.oscope_widget.m_comboBox_channel_id.addItem("Ch {0} : Chb{1} : {2}".format(self.oscope_widget.m_comboBox_channel_id.count(), channel.number, device.ip))
 
                 device.channels[numCh] = channel
                 channel.channelTab = channelWin
