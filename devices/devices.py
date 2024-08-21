@@ -210,7 +210,7 @@ class Channel:
         print("Current status: {0}".format(self.isActive))
     def updUI(self):
         self.channelTab.isChannelActive.setChecked(self.isActive)
-        self.channelTab.chan_number.setText("On board chan. No. {0}".format(self.number))
+        self.channelTab.chan_number.setText("On brd ch. N. {0}".format(self.number))
     def connectActive(self):
         isChecked = self.channelTab.isChannelActive.isChecked
         self.channelTab.isChannelActive.stateChanged.connect(lambda: self.changeStatus(isChecked()))
