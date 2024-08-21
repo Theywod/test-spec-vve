@@ -62,6 +62,7 @@ class MainWindow(QMainWindow):
         self.signal_dump_wave.connect(self.board.dump_wave)
         self.oscope_widget.signal_dump_wave_stop.connect(self.slot_dump_wave_done)
         self.board.signal_upd_wave.connect(self.oscope_widget.slot_on_wave_update)
+        self.oscope_widget.signal_dump_wave_board.connect(self.slot_dump_wave_board) #vve: connection for change ip board for get oscillogram
             #make connections for device connection window
         self.cwidget.conn_window.btn_connect.clicked.connect(lambda: self.connectDevice(self.cwidget.conn_window))
         self.cwidget.conn_window.btn_delete.clicked.connect(lambda: self.removeDevice(self.cwidget.conn_window))
@@ -107,6 +108,14 @@ class MainWindow(QMainWindow):
 
     def slot_dump_wave(self, samples_num, waves_num, channel_id):
         self.signal_dump_wave.emit(samples_num, waves_num, channel_id)
+
+    def slot_dump_wave_board(self):
+        self.oscope_widget.chnum, self.devip = self.oscope_widget.m_comboBox_channel_id.currentData()
+        self.settings["ip"] = self.devip
+        self.transport_param["ip"] = self.settings["ip"]
+        #self.transport_param["port"] = self.settings["port"]
+        self.board.connect(self.settings)
+        #vve: slot for change ip board every time when get wave pressed
 
     def setupUI(self):  #sets up UI in main window
         self.setWindowTitle("Multi-channel spectrometer")
@@ -210,7 +219,7 @@ class MainWindow(QMainWindow):
                 channel.change_name("Ch{0}".format(channel.number))
 
                 #add list of channel to comboBox of oscope
-                self.oscope_widget.m_comboBox_channel_id.addItem("Ch {0} : Chb{1} : {2}".format(self.oscope_widget.m_comboBox_channel_id.count(), channel.number, device.ip))
+                self.oscope_widget.m_comboBox_channel_id.addItem("Ch {0} : Chb{1} : {2}".format(self.oscope_widget.m_comboBox_channel_id.count(), channel.number, device.ip), [channel.number, device.ip])
 
                 device.channels[numCh] = channel
                 channel.channelTab = channelWin

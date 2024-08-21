@@ -19,13 +19,14 @@ from PyQt5.QtCore import pyqtSignal, QSettings, QObject
 from PyQt5 import QtWidgets
 from pyqt_instruments import ui_data_saver
 
-from .forms.waveform import Ui_WaveformWidget
+from .oscilloscope_form import Ui_WaveformWidget
 import pyqtgraph as pg
 
 class OscilloscopeW(QtWidgets.QWidget, Ui_WaveformWidget):
     name = 'Oscilloscope'
     signal_dump_wave = pyqtSignal(object, object, object)
     signal_dump_wave_stop = pyqtSignal()
+    signal_dump_wave_board = pyqtSignal() #vve: signal for change ip board when get wave press
 
     def __init__(self, *args, obj=None, **kwargs):
         super(QtWidgets.QWidget, self).__init__(*args, **kwargs)
@@ -72,8 +73,13 @@ class OscilloscopeW(QtWidgets.QWidget, Ui_WaveformWidget):
             waves_num = self.m_spin_repeat_waves.value()
             self.dump_begin()
 
-        channel_id = self.m_comboBox_channel_id.currentIndex()
+        #channel_id = self.m_comboBox_channel_id.currentIndex() #vve: old method for take waveform only by index of channel
+        #vve: take channel number and ip of board from current data of combobox
+        self.signal_dump_wave_board.emit()
+        self.chnum, self.devip_2 = self.m_comboBox_channel_id.currentData()
+        channel_id = self.chnum
         self.signal_dump_wave.emit(samples_num, waves_num, channel_id)
+        #print("current index {0}".format(channel_id))
 
     def slot_on_wave_update(self, wave):
         self.dumped_waves_num += 1
@@ -130,5 +136,3 @@ class OscilloscopeW(QtWidgets.QWidget, Ui_WaveformWidget):
             self.m_plot_oscilloscope.setEnabled(False)
         else:
             self.m_plot_oscilloscope.setEnabled(True)
-
-    
