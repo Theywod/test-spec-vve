@@ -14,7 +14,7 @@ QWidget#centralwidget {
 */
 
 QMainWindow, QWidget#menucolor {
-    background: rgba(32, 34, 37, 255);
+    background: rgb(239, 239, 239);
 }
 
 QMainWindow QSpinBox, QDoubleSpinBox, QComboBox, QLineEdit, 
@@ -24,32 +24,39 @@ QFrame#con_daq_wid QTabWidget#boards_mgr QWidget QTabWidget QDoubleSpinBox {
     height: 25px;
     border: 1px solid black;
     border-radius: 3px;
-    background: rgba(71, 74, 78, 255);
+    background: rgb(65, 90, 119);
+}
+
+QMainWindow QSpinBox:disabled, QDoubleSpinBox:disabled, 
+QMainWindow QSpinBox::up-button:disabled, QMainWindow QSpinBox::down-button:disabled, 
+QFrame#con_daq_wid QTabWidget#boards_mgr QWidget QTabWidget QSpinBox:disabled,
+QFrame#con_daq_wid QTabWidget#boards_mgr QWidget QTabWidget QDoubleSpinBox:disabled {
+    background: rgb(13, 27, 42);
 }
 
 QMainWindow QSpinBox::up-button, QDoubleSpinBox::up-button {
-    background: rgba(71, 74, 78, 255);
+    background: rgb(65, 90, 119);
     image: url(resources/images/up_ar.png);
 }
 
 QMainWindow QSpinBox::down-button, QDoubleSpinBox::down-button {
-    background: rgba(71, 74, 78, 255);
+    background: rgb(65, 90, 119);
     image: url(resources/images/dw_ar.png);
 }
 
 QMainWindow QSpinBox::up-button:pressed, QDoubleSpinBox::up-button:pressed {
-    background: rgba(71, 74, 78, 255);
+    background: rgb(65, 90, 119);
     image: url(resources/images/up_ar_pres.png);
 }
 
 QMainWindow QSpinBox::down-button:pressed, QDoubleSpinBox::down-button:pressed {
-    background: rgba(71, 74, 78, 255);
+    background: rgb(65, 90, 119);
     image: url(resources/images/dw_ar_pres.png);
 }
 
 QMainWindow QComboBox QAbstractItemView {
-    background: rgba(71, 74, 78, 255);
-    border: 1px solid rgba(0, 120, 212, 255);
+    background: rgb(65, 90, 119);
+    border: 1px solid black;
     border-radius: 3px;
 }
 
@@ -57,7 +64,7 @@ QMainWindow QComboBox::down-arrow {
     image: url(resources/images/dw_ar.png);
 }
 
-QMainWindow QCheckBox, QWidget#stack_wid QLabel, 
+QMainWindow QCheckBox, 
 QFrame#con_daq_wid QLabel, 
 QMainWindow QTabWidget#boards_mgr QWidget QTabWidget QLabel {
     color: white;
@@ -68,28 +75,20 @@ QMainWindow QCheckBox:indicator {
     height: 13px;
     border: 1px solid black;
     border-radius: 1px;
-    background-color: rgba(71, 74, 78, 255);
+    background: rgb(65, 90, 119);
 }
 
 QMainWindow QCheckBox::indicator:checked {
     image: url(resources/images/check.png);
 }
 
-QMainWindow QLabel#titleBar_text {
-    color: white;
-    margin-top: 2 px;
-    margin-left: 10 px;
-    font-family: 'Segoe UI';
-}
-
-
 /*-------------------------------------*/
 
 /* FRAME THAT CONTAIN CON AND DAQ WIDGETS */
 
 QFrame#con_daq_wid {
-    background: rgba(46, 48, 52, 255);
-    border-left: 1px solid black;
+    background: rgb(27, 38, 59);
+    border-top-right-radius: 20px;
 }
 
 QFrame#con_daq_wid QCheckBox {
@@ -97,11 +96,11 @@ QFrame#con_daq_wid QCheckBox {
 }
 
 QFrame#con_daq_wid QTableWidget {
-    background: rgba(54, 58, 63, 255);
+    background: rgb(65, 90, 119);
 }
 
 QFrame#con_daq_wid QTableWidget QWidget{
-    background: rgba(54, 58, 63, 255);
+    background: rgb(65, 90, 119);
     color: white;
 }
 /*---------------------------------------------------*/
@@ -121,22 +120,23 @@ QFrame#con_daq_wid QTabWidget#boards_mgr QTabBar {
 }*/
 
 QFrame#con_daq_wid QTabWidget#boards_mgr QTabBar::tab {
-    background: rgba(46, 48, 52, 255);
+    background: rgb(13, 27, 42);
     border: none;
+    border-top: 2px solid rgb(13, 27, 42);
     color: white;
     height: 25px;
     width: 100px;
 }
 
 QFrame#con_daq_wid QTabWidget#boards_mgr QTabBar::tab:selected {
-    border-top: 2px solid rgba(0, 120, 212, 255);
+    border-top: 2px solid rgb(65, 90, 119);
     border-left: none;
-    background: rgba(54, 58, 63, 255);
+    background: rgb(27, 38, 59);
 }
 
 /*channel parameters window*/
 QFrame#con_daq_wid QTabWidget#boards_mgr QWidget{
-    background: rgba(54, 58, 63, 255);
+    background: rgb(27, 38, 59);
 }
 
 QFrame#con_daq_wid QTabWidget#boards_mgr QWidget QTabWidget{
@@ -145,9 +145,8 @@ QFrame#con_daq_wid QTabWidget#boards_mgr QWidget QTabWidget{
 }
 
 QFrame#con_daq_wid QTabWidget#boards_mgr QWidget QPushButton,
-QFrame#con_daq_wid QPushButton,
-QWidget#stack_wid QPushButton {
-    background: rgba(71, 74, 78, 255);
+QFrame#con_daq_wid QPushButton, QWidget#stack_wid QPushButton {
+    background: rgb(65, 90, 119);
     border: 1px solid black;
     border-radius: 3px;
     height: 25px;
@@ -155,10 +154,9 @@ QWidget#stack_wid QPushButton {
 }
 
 QFrame#con_daq_wid QTabWidget#boards_mgr QWidget QPushButton:pressed,
-QFrame#con_daq_wid QPushButton:pressed,
-QWidget#stack_wid QPushButton:pressed {
-    background: rgba(71, 74, 78, 255);
-    border: 1px solid rgba(0, 120, 212, 255);
+QFrame#con_daq_wid QPushButton:pressed, QWidget#stack_wid QPushButton:pressed {
+    background: rgb(27, 38, 59);
+    border: 1px solid black;
     color: white;
 }
 
@@ -167,17 +165,20 @@ QWidget#stack_wid QPushButton:pressed {
 /* STACKED WIDGET  */
 
 QWidget#stack_wid {
-    background: rgba(54, 58, 63, 255);
-    border-left: 1px solid black;
+    background: rgb(239, 239, 239);
+}
+
+QWidget#stack_wid QLabel, QWidget#stack_wid QCheckBox {
+    color: black;
 }
 
 /* MENU BUTTONS */
 
 QPushButton#menu_btn_1, QPushButton#menu_btn_2,
 QPushButton#menu_btn_3, QPushButton#menu_btn_4 {
-    background-color: rgba(32, 34, 37, 255);
+    background-color: rgb(13, 27, 42);
     border: none;
-    border-left: 3px solid rgba(32, 34, 37, 255);
+    border-left: 5px solid rgb(13, 27, 42);
     height: 40;
     width: 40;
 }
@@ -200,8 +201,8 @@ QPushButton#menu_btn_4 {
 
 QPushButton:checked#menu_btn_1, QPushButton:checked#menu_btn_2,
 QPushButton:checked#menu_btn_3, QPushButton:checked#menu_btn_4 {
-    background-color: rgba(47, 49, 54, 255);
-    border: 3px solid rgba(0, 120, 212, 255);
+    background-color: rgb(27, 38, 59);
+    border: 5px solid rgb(65, 90, 119);
     border-right: none;
     border-top: none;
     border-bottom: none;

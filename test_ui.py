@@ -119,25 +119,17 @@ class Ui_MainWindow(object):
         self.con_daq_lyout.addWidget(self.boards_mgr)
 
         self.con_daq_wid = QtWidgets.QFrame()
-        self.con_daq_wid.setMaximumWidth(450)
+        self.con_daq_wid.setMaximumWidth(410)
         self.con_daq_wid.setObjectName("con_daq_wid")
         self.con_daq_wid.setLayout(self.con_daq_lyout)
 
         self.win_lyout.addWidget(self.con_daq_wid)
         
-        self.applayout = QtWidgets.QVBoxLayout()
-        self.applayout.setContentsMargins(0, 0, 0, 0)
-        self.applayout.setSpacing(0)
-        self.titleBar = MyBar(self)
-        self.applayout.addWidget(self.titleBar)
-        self.applayout.addLayout(self.hlayout)
-        
-        self.centralwidget.setLayout(self.applayout)
+        self.centralwidget.setLayout(self.hlayout)
 
         self.worker = SpectraDAQ(self.devicesMap, True)
 
         MainWindow.setCentralWidget(self.centralwidget)
-        MainWindow.setWindowFlag(QtCore.Qt.FramelessWindowHint)
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -165,130 +157,3 @@ class Ui_MainWindow(object):
         #self.tabs_lyout.setTabText(self.tabs_lyout.indexOf(self.oscope_widget), _translate("Oscilloscope","Oscilloscope"))
         #self.tabs_lyout.setTabText(self.tabs_lyout.indexOf(self.m_specWidget), _translate("Spectrometer","Spectrometer"))
         #self.tabs_lyout.setTabText(self.tabs_lyout.indexOf(self.m_sumSpectrometer), _translate("SMeter (SUM)","Sum. Spectrum"))
-
-    def changeEvent(self, event):
-        if event.type() == event.WindowStateChange:
-            self.titleBar.windowStateChanged(self.windowState())
-
-    def resizeEvent(self, event):
-        self.titleBar.resize(self.width(), self.titleBar.height())
-
-class MyBar(QtWidgets.QWidget):
-    homeAction = None
-    clickPos = None
-    def __init__(self, parent):
-        super(MyBar, self).__init__(parent)
-        #self.setAutoFillBackground(True)
-        
-        #self.setBackgroundRole(QtGui.QPalette.Shadow)
-        # alternatively:
-        # palette = self.palette()
-        # palette.setColor(palette.Window, Qt.black)
-        # palette.setColor(palette.WindowText, Qt.white)
-        # self.setPalette(palette)
-
-        layout = QtWidgets.QHBoxLayout(self)
-        layout.setContentsMargins(1, 1, 1, 1)
-        layout.addStretch()
-
-        self.title = QtWidgets.QLabel("My Own Bar", self, alignment=QtCore.Qt.AlignLeft)
-        self.title.setObjectName("titleBar_text")
-        # if setPalette() was used above, this is not required
-        #self.title.setForegroundRole(QtGui.QPalette.Light)
-
-        style = self.style()
-        ref_size = self.fontMetrics().height()
-        ref_size += style.pixelMetric(style.PM_ButtonMargin) * 2
-        self.setMaximumHeight(ref_size + 2)
-        ref_size_w = 40
-        ref_size_h = 20
-
-        btn_size = QtCore.QSize(ref_size_w, ref_size_h)
-        for target in ('min', 'normal', 'max', 'close'):
-            btn = QtWidgets.QToolButton(self, focusPolicy=QtCore.Qt.NoFocus)
-            layout.addWidget(btn)
-            btn.setFixedSize(btn_size)
-
-            iconType = QtGui.QIcon()
-            iconType.addFile("resources/images/{}.png".format(target))
-            btn.setIcon(iconType)
-
-            if target == 'close':
-                colorNormal = 'rgba(32, 34, 37, 255)'
-                colorHover = 'red'
-            else:
-                colorNormal = 'rgba(32, 34, 37, 255)'
-                colorHover = 'rgba(32, 34, 37, 255)'
-            btn.setStyleSheet('''
-                QToolButton {{
-                    background-color: {};
-                    border: none;
-                }}
-                QToolButton:hover {{
-                    background-color: {}
-                    border: none;
-                }}
-            '''.format(colorNormal, colorHover))
-
-            signal = getattr(self, target + 'Clicked')
-            btn.clicked.connect(signal)
-
-            setattr(self, target + 'Button', btn)
-
-        self.normalButton.hide()
-
-        self.updateTitle(parent.windowTitle())
-        parent.windowTitleChanged.connect(self.updateTitle)
-
-    def updateTitle(self, title=None):
-        if title is None:
-            title = self.window().windowTitle()
-        width = self.title.width()
-        width -= self.style().pixelMetric(QtWidgets.QStyle.PM_LayoutHorizontalSpacing) * 2
-        self.title.setText(self.fontMetrics().elidedText(
-            title, QtCore.Qt.ElideRight, width))
-
-    def windowStateChanged(self, state):
-        self.normalButton.setVisible(state == QtCore.Qt.WindowMaximized)
-        self.maxButton.setVisible(state != QtCore.Qt.WindowMaximized)
-
-    def mousePressEvent(self, event):
-        self.clickPos = event.pos()
-
-    def mouseReleaseEvent(self, event):
-        self.clickPos = None
-
-    def mouseMoveEvent(self, event):
-        if self.window().isMaximized():
-            return
-        if event.buttons() == QtCore.Qt.LeftButton and self.clickPos:
-            pos = event.pos() - self.clickPos
-            self.window().move(self.window().pos() + pos)
-
-    """def mousePressEvent(self, event):
-        self.clickPos = event.globalPos()
-
-    def mouseMoveEvent(self, event):
-        delta = QtCore.QPoint(event.globalPos() - self.clickPos)
-        posy = QtCore.QPoint(self.window().x() + delta.x(), self.window().y() + delta.y())
-        self.window().move(posy)
-        self.clickPos = event.globalPos()
-
-    def mouseReleaseEvent(self, event):
-        self.clickPos = event.globalPos()"""
-
-    def closeClicked(self):
-        self.window().close()
-
-    def maxClicked(self):
-        self.window().showMaximized()
-
-    def normalClicked(self):
-        self.window().showNormal()
-
-    def minClicked(self):
-        self.window().showMinimized()
-
-    def resizeEvent(self, event):
-        self.title.resize(self.minButton.x(), self.height())
-        self.updateTitle()

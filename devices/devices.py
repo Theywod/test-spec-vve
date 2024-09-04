@@ -15,12 +15,14 @@ from PyQt5.QtWidgets import (
     QPushButton, QWidget, QVBoxLayout, QGroupBox,
     QLineEdit, QGridLayout, QTableWidget,
     QListWidget, QTableWidgetItem, QComboBox,
-    QHBoxLayout, QTabWidget, QToolBar, QCheckBox, QSpacerItem, QDoubleSpinBox
+    QHBoxLayout, QTabWidget, QToolBar, QCheckBox, QSpacerItem, QDoubleSpinBox,
+    QHeaderView
 )
 from PyQt5.QtCore import (
     pyqtSignal, QThread, 
     QThreadPool, QSettings, 
-    QEvent, Qt, pyqtSlot, QSettings
+    QEvent, Qt, pyqtSlot, QSettings,
+    QSize
 )
 from PyQt5.QtGui import (
     QPixmap, QFont, QIcon
@@ -193,7 +195,7 @@ class BoardsManager(QTabWidget):
     def __init__(self):
         super().__init__()
         self.setMinimumHeight(350)
-        self.setFixedWidth(450)
+        self.setFixedWidth(410)
         self.setEnabled(True)
 
 
@@ -460,7 +462,8 @@ class DevicesMap(QTableWidget):
     def __init__(self):
         super().__init__()
         self.initUI()
- 
+        self.setFixedWidth(410)
+        self.horizontalHeader().resizeSection(1, 60)
 
     def initUI(self):
         self.setColumnCount(4)

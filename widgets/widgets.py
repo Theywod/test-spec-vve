@@ -95,11 +95,11 @@ class DaqWidget(QWidget):
         self.lne_single_daq_time.setText("1000")
         self.lbl_single_daq_ticks = QLabel("0")
         self.lbl_single_daq_ticks.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.lbl_single_daq_time = QLabel("Single DAQ frame time, ms:")
+        self.lbl_single_daq_time = QLabel("Frame time, ms:")
         self.lbl_ticks = QLabel("ticks")
 
         self.lne_full_daq_time = QLineEdit("100")
-        self.lbl_full_daq_time = QLabel("Data acquisition time, sec:")
+        self.lbl_full_daq_time = QLabel("Acq. time, sec:")
         self.lbl_full_daq_frames = QLabel("frames")
         self.lbl_full_daq_frames.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
@@ -129,7 +129,7 @@ class DaqWidget(QWidget):
 
         self.setLayout(layout)
         self.setMinimumHeight(150)
-        self.setFixedWidth(450)
+        self.setFixedWidth(400)
 
     def setAcqTime(self):
         if(len(self.devicesMap.values()) > 0):
