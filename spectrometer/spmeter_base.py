@@ -87,12 +87,12 @@ class Spectrometer(QWidget):
         self.btn_clear.clicked.connect(self.m_sp_plotter.clear)
 
 class PlSpectrometer(PlotWidget):
-    clr_cycle = ['#000', '#c77', '#0f0', '#00f','#054', '#d21', '#6c5', '#712', '#912', '#a3e', '#f21', '#840']
+    clr_cycle = ['#c77', '#0f0', '#00f','#054', '#d21', '#6c5', '#712', '#912', '#a3e', '#f21', '#840']
 
     def __init__(self):
         super().__init__()
 
-        self.setBackground('w')
+        self.setBackground('#000')
         self.setXRange(0, 1024, padding=0)
         self.setYRange(0, 100, padding=0)
         self.enableAutoRange(axis='y')

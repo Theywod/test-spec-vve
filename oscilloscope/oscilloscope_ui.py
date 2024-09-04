@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_WaveformWidget(object):
     def setupUi(self, WaveformWidget):
         WaveformWidget.setObjectName("WaveformWidget")
-        WaveformWidget.resize(672, 810)
+        WaveformWidget.resize(672, 600)
         self.gridLayout = QtWidgets.QGridLayout(WaveformWidget)
         self.gridLayout.setObjectName("gridLayout")
         self.m_plot_oscilloscope = PlotWidget(WaveformWidget)

@@ -19,7 +19,7 @@ from PyQt5.QtCore import pyqtSignal, QSettings, QObject
 from PyQt5 import QtWidgets
 from pyqt_instruments import ui_data_saver
 
-from .oscilloscope_form import Ui_WaveformWidget
+from .oscilloscope_ui import Ui_WaveformWidget
 import pyqtgraph as pg
 
 class OscilloscopeW(QtWidgets.QWidget, Ui_WaveformWidget):

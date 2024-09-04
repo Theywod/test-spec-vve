@@ -20,7 +20,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import (
     pyqtSignal, QThread, 
     QThreadPool, QSettings, 
-    QEvent, Qt, pyqtSlot
+    QEvent, Qt, pyqtSlot,
+    QFile, QTextStream
 )
 from PyQt5.QtGui import (
     QPixmap, QFont, QIcon
@@ -41,12 +42,15 @@ import numpy as np
 
 from analitics.analitics import Analitics
 
-class MainWindow(QMainWindow):
+from test_ui import Ui_MainWindow
+
+class MainWindow(QMainWindow, Ui_MainWindow):
     signal_dump_wave     = pyqtSignal(object, object, object)
 
     def __init__(self):
-        super().__init__()
-        self.setupUI()
+        super(MainWindow, self).__init__()
+        self.setContentsMargins(0, 0, 0, 0)
+        self.setupUi(self)
             #connection parameters
         self.transport_param = {'comname':'', 'speed':'', 'stopbits':'', 'ip':'', 'user':'', 'password':'', 'transport':2, 'port':5000}
         self.daq_cont = {'runned':False, 'need_reset':True, 'dumping_wave':False}
@@ -116,40 +120,6 @@ class MainWindow(QMainWindow):
         #self.transport_param["port"] = self.settings["port"]
         self.board.connect(self.settings)
         #vve: slot for change ip board every time when get wave pressed
-
-    def setupUI(self):  #sets up UI in main window
-        self.setWindowTitle("Multi-channel spectrometer")
-        self.cwidget = ConnectionWidget()
-
-        win_lyout = QVBoxLayout()
-
-        self.boards_mgr = BoardsManager()
-        self.devicesMap = self.cwidget.tbl_devices_list.devicesMap #!!!connect DeviceMap from table to main container
-        self.daqwidget = DaqWidget(self.devicesMap)
-
-
-        self.oscope_widget = oscope.OscilloscopeW()
-        self.m_specWidget = spmeters.ChanSpectrometer()
-        self.m_sumSpectrometer = spmeters.SumSpectrometer()
-        
-        toolbar = QToolBar("Main toolbar")
-        self.addToolBar(toolbar)
-
-        hlayout = QHBoxLayout()
-        hlayout.addLayout(win_lyout)
-        tabs_lyout = QTabWidget()
-
-        tabs_lyout.addTab(self.oscope_widget, "Oscilloscope")
-        tabs_lyout.addTab(self.m_specWidget, "Spectrometer")
-        tabs_lyout.addTab(self.m_sumSpectrometer, "SMeter (SUM)")
-
-        hlayout.addWidget(tabs_lyout)
-        centerwidget = QWidget()
-        win_lyout.addWidget(self.cwidget)
-        win_lyout.addWidget(self.daqwidget)
-        win_lyout.addWidget(self.boards_mgr)
-        centerwidget.setLayout(hlayout)
-        self.setCentralWidget(centerwidget)
 
     def connectDevice(self, window):  #sets connection configuration and connect to device
         self.settings["ip"] = window.lne_ip_edit.text()
@@ -242,6 +212,14 @@ class MainWindow(QMainWindow):
 
      
 app = QApplication(sys.argv)
+#with open("resources/style/style.qss", "r") as style_file:
+#    style_str = style_file.read()
+#app.setStyleSheet(style_str)
+#app.setStyleSheet("style.qss")
+style_file = QFile("resources/style/style.qss")
+style_file.open(QFile.ReadOnly | QFile.Text)
+style_stream = QTextStream(style_file)
+app.setStyleSheet(style_stream.readAll())
 window = MainWindow()
 window.show()
 app.exec()

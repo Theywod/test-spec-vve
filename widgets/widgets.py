@@ -36,6 +36,7 @@ class ConnectionWidget(QWidget):
         #self.btn_get_spectrum = QPushButton("Get spectrum")
 
         layout = QVBoxLayout()
+        layout.setContentsMargins(1, 11, 0, 11)
         layout.addWidget(self.chk_use_master)
         layout.addWidget(self.conn_window)
         layout.addWidget(self.tbl_devices_list)
@@ -105,9 +106,9 @@ class DaqWidget(QWidget):
         self.lbl_frames = QLabel("frames")
 
         self.btn_updAcqTime = QPushButton("Send acq times")
-        self.btn_get_single_spectrum = QPushButton("Get single spectrum")
-        self.btn_get_full_spectrum = QPushButton("Start data acquisition")
-        self.btn_interrupt = QPushButton("Stop data acquisition")
+        self.btn_get_single_spectrum = QPushButton("Get single")
+        self.btn_get_full_spectrum = QPushButton("Start")
+        self.btn_interrupt = QPushButton("Stop")
 
         layout.addWidget(self.lbl_single_daq_time, 0, 0, 1, 1)
         layout.addWidget(self.lne_single_daq_time, 0, 1, 1, 1)
@@ -121,8 +122,8 @@ class DaqWidget(QWidget):
 
         layout.addWidget(self.btn_updAcqTime, 2, 0, 1, 1)
         layout.addWidget(self.btn_get_single_spectrum, 2, 1, 1, 1)
-        layout.addWidget(self.btn_get_full_spectrum, 2, 2, 1, 2)
-        layout.addWidget(self.btn_interrupt, 3, 1, 1, 2)
+        layout.addWidget(self.btn_get_full_spectrum, 2, 2, 1, 1)
+        layout.addWidget(self.btn_interrupt, 2, 3, 1, 1)
         self.recalcTicks()
         self.recalcFrames()
 

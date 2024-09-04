@@ -78,7 +78,7 @@ class ChannelWindow(QWidget):
         self.lne_threshold.setSingleStep(1e-3)
         self.lne_threshold.setDecimals(3)
         self.lbl_threshold_ticks = QLabel("0")
-        self.chk_hyst = QCheckBox("Enable hystheresis")
+        self.chk_hyst = QCheckBox("Hystheresis")
         self.lbl_pretrig = QLabel("Pretrigger, bins")
         self.lne_pretrig = QSpinBox()
         self.lne_pretrig.setRange(0,255)
@@ -111,9 +111,9 @@ class ChannelWindow(QWidget):
         self.lne_ampl.setRange(0,255)
         self.lbl_ampl = QLabel("0")
         #positioning in layout
-        self.grid_chProps.addWidget(self.channel_id, 0, 0, 1, 1)
-        self.grid_chProps.addWidget(self.isChannelActive, 0, 1, 1, 1)
-        self.grid_chProps.addWidget(self.chan_number, 0, 2, 1, 1)
+        #self.grid_chProps.addWidget(self.channel_id, 0, 0, 1, 1)
+        self.grid_chProps.addWidget(self.isChannelActive, 0, 0, 1, 1)
+        self.grid_chProps.addWidget(self.chan_number, 0, 1, 1, 1)
 
 
         self.grid_chProps.addWidget(self.lbl_threshold_capt, 1, 0, 1, 1)
@@ -142,6 +142,7 @@ class ChannelWindow(QWidget):
         self.grid_chProps.addWidget(self.lbl_ampl, 8, 2, 1, 1)
 
         layout = QVBoxLayout(self)
+        #layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(self.grid_chProps)
         layout.addStretch()
 
@@ -178,9 +179,11 @@ class BoardWindow(QWidget):     #widget for board properties and channels, is em
         layout.addWidget(self.channels_tab)
 
         hlayout = QHBoxLayout()
+        hlayout.setContentsMargins(8, 0, 8, 0)
         hlayout.addWidget(self.btn_sendData)
         hlayout.addWidget(self.btn_loadData)
         layout.addLayout(hlayout)
+        layout.setContentsMargins(0, 0, 0, 8)
 
         self.setLayout(layout)
         self.setEnabled(True)
