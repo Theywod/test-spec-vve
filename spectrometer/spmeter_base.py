@@ -72,6 +72,7 @@ class Spectrometer(QWidget):
     def __init__(self):
         super().__init__()
         self.m_sp_plotter = PlSpectrometer()
+        self.m_sp_plotter.setObjectName("m_sp_plotter")
 
         #self.frameTime = 1.0 #frame time = 1 s by default
         
@@ -92,7 +93,7 @@ class PlSpectrometer(PlotWidget):
     def __init__(self):
         super().__init__()
 
-        self.setBackground('#000')
+        self.setBackground(None)
         self.setXRange(0, 1024, padding=0)
         self.setYRange(0, 100, padding=0)
         self.enableAutoRange(axis='y')

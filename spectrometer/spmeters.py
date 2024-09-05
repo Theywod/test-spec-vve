@@ -44,6 +44,7 @@ class ChanSpectrometer(Spectrometer):
 
     def setupUI(self):
         self.layout = QVBoxLayout()
+        self.layout.setContentsMargins(5, 5, 0, 0)
 
         self.layout_btns = QHBoxLayout()
         self.layout_btns.addWidget(self.btn_clear)
@@ -143,6 +144,7 @@ class SumSpectrometer(Spectrometer):
         #self.lbl_entries = QLabel("0/0 entries")
 
         self.layout = QVBoxLayout()
+        self.layout.setContentsMargins(5, 5, 0, 0)
 
         self.layout_btns = QHBoxLayout()
         self.layout_btns.addWidget(self.btn_clear)

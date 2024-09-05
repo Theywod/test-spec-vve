@@ -13,7 +13,7 @@ QWidget#centralwidget {
 }
 */
 
-QMainWindow, QWidget#menucolor {
+QMainWindow, QWidget#menucolor, QWidget#stack_wid {
     background: rgb(239, 239, 239);
 }
 
@@ -81,8 +81,6 @@ QMainWindow QCheckBox:indicator {
 QMainWindow QCheckBox::indicator:checked {
     image: url(resources/images/check.png);
 }
-
-/*-------------------------------------*/
 
 /* FRAME THAT CONTAIN CON AND DAQ WIDGETS */
 
@@ -160,16 +158,17 @@ QFrame#con_daq_wid QPushButton:pressed, QWidget#stack_wid QPushButton:pressed {
     color: white;
 }
 
-/*------------------------------------*/
-
 /* STACKED WIDGET  */
-
-QWidget#stack_wid {
-    background: rgb(239, 239, 239);
-}
 
 QWidget#stack_wid QLabel, QWidget#stack_wid QCheckBox {
     color: black;
+}
+
+QWidget#stack_wid QWidget#m_plot_oscilloscope, QWidget#stack_wid QWidget#m_sp_plotter {
+    border: 7px solid rgb(27, 38, 59);
+    background: rgb(27, 38, 59);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
 }
 
 /* MENU BUTTONS */
